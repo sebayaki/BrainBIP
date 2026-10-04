@@ -73,7 +73,9 @@ npm run test:build   # Verify checksums, CSP hashes, and offline packaging
 npm run test:browser # Exercise the UI and offline file in Chrome
 ```
 
-Browser tests use a locally installed Google Chrome. Dependencies are pinned in `package-lock.json` and bundled at build time. Test fixtures contain deliberately public example secrets and must never receive funds.
+Browser tests use a locally installed Google Chrome; CI installs Playwright Chromium. Dependencies are pinned in `package-lock.json` and bundled at build time. Test fixtures contain deliberately public example secrets and must never receive funds.
+
+The Pages workflow checks the cryptographic vectors, standalone packaging, and browser behavior before publishing `dist/`. It runs when app, test, or build files change on `main`, and can also be started manually. Repository owners must select **GitHub Actions** as the publishing source in **Settings → Pages** before the first deployment.
 
 The interface uses vanilla JavaScript and CSS. Cryptographic primitives come from [hash-wasm](https://github.com/Daninet/hash-wasm), [noble](https://github.com/paulmillr/noble-hashes), [scure](https://github.com/paulmillr/scure-bip39), and [micro-key-producer](https://github.com/paulmillr/micro-key-producer). Local password estimates use [zxcvbn-ts](https://github.com/zxcvbn-ts/zxcvbn). Inspired by [WarpWallet](https://github.com/keybase/warpwallet).
 
