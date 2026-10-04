@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import {
   createHash,
   createHmac,
@@ -22,21 +22,13 @@ import {
   deriveWallet,
   safeErrorMessage,
 } from '../src/crypto.js';
-import {
-  PROFILES,
-  DEFAULT_PROFILE_ID,
-  PROFILE_V1,
-  PROFILE_V2,
-  getProfile,
-} from '../src/profiles.js';
+import * as profileModule from '../src/profiles.js';
 
 const standardMnemonic =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const fixturesDirectory = new URL('./fixtures/', import.meta.url);
 const fixture = async (name) =>
   JSON.parse(await readFile(new URL(name, fixturesDirectory), 'utf8'));
-const originalChains = (addresses) =>
-  Object.fromEntries(['btc', 'eth', 'sol', 'zec'].map((chain) => [chain, addresses[chain]]));
 const hash = (algorithm, data) => createHash(algorithm).update(data).digest();
 const sha256 = (data) => hash('sha256', data);
 const hash160 = (data) => hash('ripemd160', sha256(data));
@@ -204,11 +196,10 @@ async function referenceAddresses(mnemonic, count = 20) {
 
 // Explicit maintainer-only fixture generation. This derives public test data
 // through separate implementations; normal test runs never rewrite fixtures.
-if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
-  const legacy = await fixture('brainbip-v1.json');
-  const profile = getProfile('brainbip-v2');
-  const passphrase = legacy.passphrase;
-  const email = legacy.email;
+if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
+  const profile = PROFILE;
+  const passphrase = '  BrainBIP Å test — do not fund  ';
+  const email = '  Test.Vector＠Example.invalid  ';
   const normalizedPassphrase = passphrase.normalize('NFKC');
   const normalizedEmail = email.normalize('NFKC').trim();
   const password = Buffer.from(normalizedPassphrase);
@@ -222,7 +213,7 @@ if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
     version: profile.argon2id.version,
     dkLen: profile.argon2id.outputBytes,
   });
-  console.log(`Independent v2 Argon2id reference: ${(performance.now() - started).toFixed(0)} ms`);
+  console.log(`Independent Argon2id reference: ${(performance.now() - started).toFixed(0)} ms`);
   const pbkdfKey = pbkdf2Sync(
     password,
     pbkdfSalt,
@@ -264,98 +255,13 @@ if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
   );
   for (const buffer of [password, argonSalt, pbkdfSalt, argonKey, pbkdfKey, entropy])
     buffer.fill(0);
-  console.log('Public v2 independent reference fixture generated; v1 fixtures unchanged.');
-} else if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
-  await mkdir(fixturesDirectory, { recursive: true });
-  const standard = {
-    provenance:
-      'Node/OpenSSL HMAC, PBKDF2, secp256k1 and Ed25519; independent BIP32, SLIP10, Base58 and Bech32 encoders; hash-wasm Keccak.',
-    mnemonic: standardMnemonic,
-    addresses: await referenceAddresses(standardMnemonic),
-  };
-  await writeFile(
-    new URL('standard-addresses.json', fixturesDirectory),
-    JSON.stringify(standard, null, 2) + '\n',
-  );
-  const passphrase = '  BrainBIP Å test — do not fund  ';
-  const email = '  Test.Vector＠Example.invalid  ';
-  const password = Buffer.from(passphrase.normalize('NFKC'));
-  const normalizedEmail = email.normalize('NFKC').trim();
-  const argonSalt = Buffer.concat([
-    Buffer.from('BrainBIP/v1/argon2id\0'),
-    Buffer.from(normalizedEmail),
-  ]);
-  const pbkdfSalt = Buffer.concat([
-    Buffer.from('BrainBIP/v1/pbkdf2\0'),
-    Buffer.from(normalizedEmail),
-  ]);
-  const started = performance.now();
-  const argonKey = await referenceArgon2id(password, argonSalt, {
-    m: 262144,
-    t: 3,
-    p: 1,
-    version: 19,
-    dkLen: 32,
-  });
-  console.log(`Independent Argon2id reference: ${(performance.now() - started).toFixed(0)} ms`);
-  const pbkdfKey = pbkdf2Sync(password, pbkdfSalt, 1048576, 32, 'sha256');
-  const entropy = Buffer.from(argonKey.slice(0, 16)).map((byte, index) => byte ^ pbkdfKey[index]);
-  const mnemonic = referenceMnemonic(entropy);
-  const production = {
-    warning: 'PUBLIC TEST VECTOR. NEVER DEPOSIT FUNDS TO THESE ADDRESSES.',
-    provenance:
-      'Argon2id: noble-hashes JS implementation, independently checked by the production hash-wasm test; PBKDF2/BIP39 seed and HD/address reference: Node/OpenSSL plus the independent test encoders.',
-    profile: 'brainbip-v1',
-    passphrase,
-    email,
-    normalizedPassphrase: passphrase.normalize('NFKC'),
-    normalizedEmail,
-    argonSaltHex: argonSalt.toString('hex'),
-    pbkdfSaltHex: pbkdfSalt.toString('hex'),
-    argonKeyHex: Buffer.from(argonKey).toString('hex'),
-    pbkdfKeyHex: pbkdfKey.toString('hex'),
-    entropyHex: entropy.toString('hex'),
-    mnemonic,
-    bip39SeedHex: pbkdf2Sync(
-      Buffer.from(mnemonic.normalize('NFKD')),
-      Buffer.from('mnemonic'),
-      2048,
-      64,
-      'sha512',
-    ).toString('hex'),
-    addresses: await referenceAddresses(mnemonic),
-  };
-  await writeFile(
-    new URL('brainbip-v1.json', fixturesDirectory),
-    JSON.stringify(production, null, 2) + '\n',
-  );
-  console.log('Public reference fixtures generated.');
+  console.log('Public independent reference fixture generated.');
 } else {
-  test('profile is fixed and nested parameters are immutable', () => {
-    assert.equal(PROFILE.id, 'brainbip-v1');
+  test('one fixed profile exposes immutable current recovery parameters', () => {
+    assert.deepEqual(Object.keys(profileModule), ['PROFILE']);
+    assert.equal(PROFILE, profileModule.PROFILE);
+    assert.equal(PROFILE.id, 'brainbip-v2');
     assert.deepEqual(PROFILE.argon2id, {
-      version: 19,
-      memoryKiB: 262144,
-      iterations: 3,
-      parallelism: 1,
-      outputBytes: 32,
-      saltPrefix: 'BrainBIP/v1/argon2id\0',
-    });
-    assert.equal(PROFILE.pbkdf2.iterations, 1048576);
-    assert.equal(PROFILE.bip39Passphrase, '');
-    for (const value of [PROFILE, PROFILE.argon2id, PROFILE.pbkdf2, PROFILE.paths])
-      assert.ok(Object.isFrozen(value));
-    assert.throws(() => {
-      PROFILE.argon2id.memoryKiB = 8;
-    }, TypeError);
-  });
-
-  test('v2 is the default fixed profile and shares only unchanged recovery conventions with v1', () => {
-    assert.equal(PROFILE, PROFILE_V1);
-    assert.equal(DEFAULT_PROFILE_ID, 'brainbip-v2');
-    assert.equal(getProfile('brainbip-v1'), PROFILE_V1);
-    assert.equal(getProfile(DEFAULT_PROFILE_ID), PROFILE_V2);
-    assert.deepEqual(PROFILE_V2.argon2id, {
       version: 19,
       memoryKiB: 524288,
       iterations: 16,
@@ -363,56 +269,29 @@ if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
       outputBytes: 32,
       saltPrefix: 'BrainBIP/v2/argon2id\0',
     });
-    assert.deepEqual(PROFILE_V2.pbkdf2, {
+    assert.deepEqual(PROFILE.pbkdf2, {
       hash: 'SHA-256',
       iterations: 5242880,
       outputBytes: 32,
       saltPrefix: 'BrainBIP/v2/pbkdf2\0',
     });
-    for (const name of [
-      'maxPassphraseCharacters',
-      'maxEmailCharacters',
-      'addressCount',
-      'entropyBytes',
-      'mnemonicWords',
-      'bip39Passphrase',
-      'paths',
-    ]) {
-      assert.deepEqual(PROFILE_V2[name], PROFILE_V1[name]);
-    }
-    for (const value of [
-      PROFILES,
-      PROFILE_V2,
-      PROFILE_V2.argon2id,
-      PROFILE_V2.pbkdf2,
-      PROFILE_V2.paths,
-    ])
+    assert.equal(PROFILE.maxPassphraseCharacters, 1024);
+    assert.equal(PROFILE.maxEmailCharacters, 320);
+    assert.equal(PROFILE.addressCount, 20);
+    assert.equal(PROFILE.entropyBytes, 16);
+    assert.equal(PROFILE.mnemonicWords, 12);
+    assert.equal(PROFILE.bip39Passphrase, '');
+    assert.deepEqual(PROFILE.paths, {
+      btc: "m/84'/0'/0'/0/{index}",
+      eth: "m/44'/60'/0'/0/{index}",
+      sol: "m/44'/501'/{index}'/0'",
+      zec: "m/44'/133'/0'/0/{index}",
+    });
+    for (const value of [PROFILE, PROFILE.argon2id, PROFILE.pbkdf2, PROFILE.paths])
       assert.ok(Object.isFrozen(value));
-  });
-
-  test('unknown profiles are rejected before any derivation stage without fallback or reflected input', async () => {
-    const message = 'Choose a supported derivation profile.';
-    for (const id of [
-      undefined,
-      null,
-      '',
-      'brainbip-v3',
-      'BrainBIP-v2',
-      'constructor',
-      '__proto__',
-      1,
-      {},
-    ]) {
-      assert.throws(() => getProfile(id), { message });
-      if (id === undefined) continue; // deriveWallet's omitted argument uses the explicit default.
-      const stages = [];
-      await assert.rejects(
-        deriveWallet('public test only', '', (stage) => stages.push(stage), id),
-        { message },
-      );
-      assert.deepEqual(stages, []);
-    }
-    assert.equal(safeErrorMessage(new Error(message)), message);
+    assert.throws(() => {
+      PROFILE.argon2id.memoryKiB = 8;
+    }, TypeError);
   });
 
   test('normalization preserves passphrase whitespace and all case, trims only email', () => {
@@ -479,7 +358,7 @@ if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
 
   test('hash-wasm PBKDF2-SHA256 matches Node/OpenSSL including embedded NUL and UTF-8', async () => {
     const password = Buffer.from(' P\0é ');
-    const salt = Buffer.from('BrainBIP/v1/pbkdf2\0User@Example.invalid');
+    const salt = Buffer.from('BrainBIP/v2/pbkdf2\0User@Example.invalid');
     const actual = await pbkdf2({
       password,
       salt,
@@ -537,7 +416,7 @@ if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
 
   test('all 80 mainnet addresses match independent OpenSSL HD and encoding references', async () => {
     const expected = await fixture('standard-addresses.json');
-    assert.deepEqual(originalChains(deriveAddresses(expected.mnemonic)), expected.addresses);
+    assert.deepEqual(deriveAddresses(expected.mnemonic), expected.addresses);
     assert.deepEqual(await referenceAddresses(expected.mnemonic), expected.addresses);
     // Official BIP84 test vectors directly verify the reference Bech32 encoder.
     assert.equal(expected.addresses.btc[0].address, 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
@@ -570,83 +449,29 @@ if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
   });
 
   test(
-    'fixed v1 production vector uses full costs and matches an independent Argon2id reference',
-    { timeout: 120000 },
-    async (context) => {
-      const expected = await fixture('brainbip-v1.json');
-      const stages = [];
-      const started = performance.now();
-      const actual = await deriveWallet(
-        expected.passphrase,
-        expected.email,
-        (stage) => stages.push(stage),
-        'brainbip-v1',
-      );
-      context.diagnostic(
-        `Full 256 MiB Argon2id + 1,048,576 PBKDF2 + 100 addresses: ${(performance.now() - started).toFixed(0)} ms`,
-      );
-      assert.deepEqual(stages, ['argon2id', 'pbkdf2', 'addresses']);
-      assert.deepEqual(
-        {
-          profile: actual.profile,
-          mnemonic: actual.mnemonic,
-          addresses: originalChains(actual.addresses),
-        },
-        { profile: expected.profile, mnemonic: expected.mnemonic, addresses: expected.addresses },
-      );
-      assert.equal(
-        Buffer.from(mnemonicToSeedSync(actual.mnemonic, '')).toString('hex'),
-        expected.bip39SeedHex,
-      );
-      // Verify fixture PBKDF2 and mixing independently without another expensive Argon2 invocation.
-      const password = Buffer.from(expected.normalizedPassphrase);
-      const pbkdfKey = pbkdf2Sync(
-        password,
-        Buffer.from(expected.pbkdfSaltHex, 'hex'),
-        1048576,
-        32,
-        'sha256',
-      );
-      assert.equal(pbkdfKey.toString('hex'), expected.pbkdfKeyHex);
-      const entropy = Buffer.from(expected.argonKeyHex, 'hex')
-        .subarray(0, 16)
-        .map((byte, index) => byte ^ pbkdfKey[index]);
-      assert.equal(entropy.toString('hex'), expected.entropyHex);
-      assert.equal(referenceMnemonic(entropy), actual.mnemonic);
-    },
-  );
-
-  test(
-    'default v2 uses full fixed costs and matches independent Argon2id/OpenSSL reference data',
+    'current fixed derivation uses full costs and matches independent Argon2id/OpenSSL reference data',
     { timeout: 120000 },
     async (context) => {
       const expected = await fixture('brainbip-v2.json');
-      const legacy = await fixture('brainbip-v1.json');
       const stages = [];
       const started = performance.now();
       const actual = await deriveWallet(expected.passphrase, expected.email, (stage) =>
         stages.push(stage),
       );
       context.diagnostic(
-        `Full v2 512 MiB/t16 Argon2id + 5,242,880 PBKDF2 + 100 addresses: ${(performance.now() - started).toFixed(0)} ms`,
+        `Full 512 MiB/t16 Argon2id + 5,242,880 PBKDF2 + 80 addresses: ${(performance.now() - started).toFixed(0)} ms`,
       );
       assert.deepEqual(stages, ['argon2id', 'pbkdf2', 'addresses']);
-      assert.deepEqual(
-        {
-          profile: actual.profile,
-          mnemonic: actual.mnemonic,
-          addresses: originalChains(actual.addresses),
-        },
-        { profile: 'brainbip-v2', mnemonic: expected.mnemonic, addresses: expected.addresses },
-      );
-      assert.notEqual(actual.mnemonic, legacy.mnemonic);
+      assert.deepEqual(actual, {
+        profile: 'brainbip-v2',
+        mnemonic: expected.mnemonic,
+        addresses: expected.addresses,
+      });
       assert.equal(
         Buffer.from(mnemonicToSeedSync(actual.mnemonic, '')).toString('hex'),
         expected.bip39SeedHex,
       );
       assert.deepEqual(await referenceAddresses(actual.mnemonic), expected.addresses);
-      assert.equal(actual.addresses.xmr.length, 20);
-      assert.equal(actual.recovery.xmr.mnemonic.split(' ').length, 25);
       const password = Buffer.from(expected.normalizedPassphrase);
       const argonSalt = Buffer.from(expected.argonSaltHex, 'hex');
       const pbkdfSalt = Buffer.from(expected.pbkdfSaltHex, 'hex');

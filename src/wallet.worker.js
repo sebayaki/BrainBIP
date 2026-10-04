@@ -9,11 +9,8 @@ self.onmessage = async ({ data }) => {
   }
   started = true;
   try {
-    const result = await deriveWallet(
-      data?.passphrase,
-      data?.email ?? '',
-      (stage) => self.postMessage({ id, type: 'stage', stage }),
-      data?.profileId,
+    const result = await deriveWallet(data?.passphrase, data?.email ?? '', (stage) =>
+      self.postMessage({ id, type: 'stage', stage }),
     );
     self.postMessage({ id, type: 'result', result });
   } catch (error) {

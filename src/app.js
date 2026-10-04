@@ -5,14 +5,13 @@ import { createClipboardController } from './ui/clipboard.js';
 import { createRecoveryView } from './ui/recovery.js';
 import { createStrengthController } from './ui/strength.js';
 import { createProgressController } from './ui/progress.js';
-import { DEFAULT_PROFILE_ID, getProfile } from './profiles.js';
+import { PROFILE } from './profiles.js';
 
 const $ = (id) => document.getElementById(id);
 const form = $('wallet-form');
 const passphraseInput = $('passphrase');
 const emailInput = $('email');
 const privateEmailInput = $('private-email');
-const profileInput = $('profile-select');
 const generateButton = $('generate-button');
 let jobCounter = 0;
 let uiRevision = 0;
@@ -126,11 +125,10 @@ function startDerivation(event) {
   setBusy(true);
   announce('Starting local computation.');
   try {
-    const profile = getProfile(profileInput.value);
-    progress.start(profile);
+    progress.start(PROFILE);
     wallet.start(
       ++jobCounter,
-      { passphrase: passphraseInput.value, email: emailInput.value, profileId: profile.id },
+      { passphrase: passphraseInput.value, email: emailInput.value },
       {
         onMessage(data) {
           if (data.type === 'stage') setStage(data.stage);
@@ -185,7 +183,6 @@ function resetAll({ focus = true, announceReset = true } = {}) {
   strength.clear();
   clipboard.clear();
   form.reset();
-  profileInput.value = DEFAULT_PROFILE_ID;
   setPrivateEmail(false);
   passphraseInput.value = '';
   emailInput.value = '';
@@ -205,7 +202,6 @@ function resetAll({ focus = true, announceReset = true } = {}) {
 form.addEventListener('submit', startDerivation);
 passphraseInput.addEventListener('input', handleInputEdit);
 emailInput.addEventListener('input', handleInputEdit);
-profileInput.addEventListener('change', handleInputEdit);
 privateEmailInput.addEventListener('click', () => {
   setPrivateEmail(!privateEmailEnabled());
   strength.schedule();

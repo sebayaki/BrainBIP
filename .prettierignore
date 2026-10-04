@@ -8,6 +8,5 @@ playwright-report/
 .release/
 package-lock.json
 tests/fixtures/
-src/monero-english.js
 licenses/
 LICENSE

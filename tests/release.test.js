@@ -29,7 +29,7 @@ test('release command validates the exact tag and produces reviewable notes with
     { encoding: 'utf8' },
   );
   assert.match(notes, /## Downloads/);
-  assert.match(notes, /brainbip-v1/);
+  assert.match(notes, /brainbip-v2/);
   assert.ok(
     notes.includes(
       releaseEntry(

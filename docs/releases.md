@@ -4,16 +4,16 @@ The application version lives in `package.json`. The lockfile, newest dated chan
 
 Application versions follow `MAJOR.MINOR.PATCH`, optionally followed by a prerelease identifier such as `0.3.0-rc.1`. Build metadata is not used. While the project is below 1.0, it remains experimental and unaudited. A release label is not a security certification.
 
-## Recovery versions stay fixed
+## One fixed derivation
 
-`brainbip-v1` and `brainbip-v2` define separate fixed input-to-mnemonic profiles with shared normalization and chain mappings. V2 is the default for new generation; v1 remains available for recovery. The same inputs produce different wallets under the two profiles. `ledger-bip39-v1` defines the shared Monero mapping from a BIP39 seed. These identifiers do not track the application version.
+The app exposes one fixed input-to-mnemonic algorithm and Bitcoin, Ethereum, Solana, and Zcash mappings. Application versions identify software builds; they are not adjustable derivation parameters.
 
-An interface cleanup or dependency update must reproduce the existing vectors. Changes that affect recovered wallets require a new recovery profile, explicit documentation, and continued access to the old profile. Never silently retune a published profile.
+Check interface and dependency changes against the independent derivation vectors. Keep the specification, tests, and release notes aligned with the algorithm shipped in the build. Runtime parameters never adapt to device performance.
 
 ## Prepare a version
 
 1. Update the app version and lockfile with `npm version X.Y.Z --no-git-tag-version --ignore-scripts`.
-2. Add a dated entry at the top of `CHANGELOG.md`, below `Unreleased`. Describe the resulting behavior and recovery compatibility. The changelog is the source for GitHub release notes.
+2. Add a dated entry at the top of `CHANGELOG.md`, below `Unreleased`. Describe the resulting behavior and any change to deterministic outputs. The changelog is the source for GitHub release notes.
 3. Run `npm run format`, `npm run check`, and `npm run test:browser`. Inspect the generated offline HTML and keep real wallet material out of tests and artifacts.
 4. Review and commit the exact source to be published. Push it to `main`; the **Check** workflow verifies it and publishes the verified artifact to Pages.
 5. Once that run succeeds, create an annotated tag on that exact commit, then push the specific tag:

@@ -77,7 +77,8 @@ test('distribution contains attribution and excludes local build paths and sourc
     'The Go Authors',
     '@fontsource-variable/instrument-sans',
     '@fontsource/ibm-plex-mono',
-    'Monero English mnemonic wordlist',
+    'Cryptocurrency Icons',
+    'CC0 1.0 Universal',
   ]) {
     assert.ok(notices.includes(name), `Missing attribution: ${name}`);
     assert.ok(file.includes(name), `Offline attribution missing: ${name}`);

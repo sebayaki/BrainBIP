@@ -3,38 +3,83 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const fixture = JSON.parse(
-  await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'),
-);
-const v2Fixture = JSON.parse(
   await readFile(new URL('../fixtures/brainbip-v2.json', import.meta.url), 'utf8'),
 );
-const moneroFixture = JSON.parse(
-  await readFile(new URL('../fixtures/monero-ledger-v1.json', import.meta.url), 'utf8'),
-).vectors.find((vector) => vector.id === 'brainbip-v1-public');
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
 
 async function enterFixture(page) {
-  await page.locator('#profile-select').selectOption('brainbip-v1');
   await page.locator('#passphrase').fill(fixture.passphrase);
   await page.locator('#email').fill(fixture.email);
 }
 
 async function generate(page) {
   await page.locator('#generate-button').click();
-  await expect(page.locator('#result-state')).toBeVisible({ timeout: 45_000 });
+  await expect(page.locator('#result-state')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('#mnemonic-grid li')).toHaveCount(12);
 }
 
 async function assertAllAddresses(page) {
-  for (const chain of ['btc', 'eth', 'sol', 'zec', 'xmr']) {
-    const rows = chain === 'xmr' ? moneroFixture.addresses : fixture.addresses[chain];
+  await expect(page.locator('#chain-tabs button')).toHaveText([
+    'Bitcoin',
+    'Ethereum',
+    'Solana',
+    'Zcash',
+  ]);
+  await expect(page.locator('#chain-tabs svg[aria-hidden="true"]')).toHaveCount(4);
+  for (const chain of ['btc', 'eth', 'sol', 'zec']) {
+    const rows = fixture.addresses[chain];
     await page.locator(`#tab-${chain}`).click();
     await expect(page.locator('#address-list tr')).toHaveCount(20);
     await expect(page.locator('.address-text')).toHaveText(rows.map((entry) => entry.address));
     await expect(page.locator('.address-path')).toHaveText(rows.map((entry) => entry.path));
   }
 }
+
+test('full-name chain tabs stay reachable by keyboard without moving the page vertically', async ({
+  page,
+}, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/');
+  await enterFixture(page);
+  await generate(page);
+  await page.locator('#chain-tabs').scrollIntoViewIfNeeded();
+  await page.locator('#tab-btc').focus();
+  const before = await page.evaluate(() => window.scrollY);
+  await page.locator('#tab-btc').press('End');
+  await expect(page.getByRole('tab', { name: 'Zcash', exact: true })).toBeFocused();
+  await expect(page.locator('#tab-zec')).toHaveAttribute('aria-selected', 'true');
+  await expect
+    .poll(() => page.locator('#chain-tabs').evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0);
+  expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThanOrEqual(1);
+  const fits = await page.locator('#tab-zec').evaluate((tab) => {
+    const viewport = tab.parentElement.getBoundingClientRect();
+    const bounds = tab.getBoundingClientRect();
+    return bounds.left >= viewport.left && bounds.right <= viewport.right;
+  });
+  expect(fits).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('mobile-chain-tabs.png') });
+  await page.locator('#tab-zec').press('Home');
+  await expect(page.getByRole('tab', { name: 'Bitcoin', exact: true })).toBeFocused();
+  await expect
+    .poll(() => page.locator('#chain-tabs').evaluate((element) => element.scrollLeft))
+    .toBeLessThanOrEqual(4);
+  expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThanOrEqual(1);
+  for (const width of [390, 600, 880, 1080, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    for (const tab of await page.locator('#chain-tabs button').all()) {
+      expect(await tab.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      );
+      expect((await tab.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
 
 test('hosted edition computes the full profile offline, shows all addresses, and clears secrets', async ({
   page,
@@ -252,7 +297,6 @@ test('long input is rejected explicitly instead of silently truncated into anoth
 
 test('private email is opt-in, updates only the estimate, and resets off', async ({ page }) => {
   await page.goto('/');
-  await page.locator('#profile-select').selectOption('brainbip-v1');
   const toggle = page.getByRole('switch', { name: 'This email is private' });
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await page.locator('#passphrase').fill('correct horse battery staple');
@@ -279,54 +323,12 @@ test('private email is opt-in, updates only the estimate, and resets off', async
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
 });
 
-test('Monero recovery is hidden by default and cleared after closing, switching, or reset', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await enterFixture(page);
-  await generate(page);
-  await expect(page.locator('#monero-recovery-panel')).toBeHidden();
-  await page.locator('#tab-xmr').click();
-  await expect(page.locator('#address-list tr')).toHaveCount(20);
-  await expect(page.locator('.address-path-details summary').first()).toHaveText('Primary · 0 / 0');
-  await expect(page.locator('.address-path-details summary').last()).toHaveText(
-    'Subaddress · 0 / 19',
-  );
-  await page.locator('#monero-recovery-details > summary').click();
-  const words = page.locator('#monero-mnemonic-grid .word-value');
-  await expect(words).toHaveCount(25);
-  await expect(words.first()).toHaveText('••••••');
-  await page.locator('#toggle-monero-phrase').click();
-  await expect(words).toHaveText(moneroFixture.recovery.mnemonic.split(' '));
-  for (const width of [320, 390, 900, 1081, 1280]) {
-    await page.setViewportSize({ width, height: 1000 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
-    const clipped = await page
-      .locator('.word-value, .address-text')
-      .evaluateAll((elements) =>
-        elements.some((element) => element.scrollWidth > element.clientWidth + 1),
-      );
-    expect(clipped).toBe(false);
-  }
-  await page.locator('#monero-recovery-details > summary').click();
-  await expect(words.first()).toHaveText('••••••');
-  await page.locator('#monero-recovery-details > summary').click();
-  await page.locator('#toggle-monero-phrase').click();
-  await page.locator('#tab-btc').click();
-  await expect(words.first()).toHaveText('••••••');
-  await expect(page.locator('#monero-recovery-panel')).toBeHidden();
-  await page.locator('#reset-button').click();
-  await expect(words).toHaveCount(0);
-});
-
-test('default V2 reports real stages and retains explicit V1 recovery', async ({
+test('the fixed derivation reports real stages and clears results on reset', async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
-  await expect(page.locator('#profile-select')).toHaveValue('brainbip-v2');
+  await expect(page.locator('#profile-select')).toHaveCount(0);
   await page.evaluate(() => {
     window.testStages = [];
     const progress = document.getElementById('progress-state');
@@ -335,8 +337,8 @@ test('default V2 reports real stages and retains explicit V1 recovery', async ({
       if (stage && window.testStages.at(-1) !== stage) window.testStages.push(stage);
     }).observe(progress, { attributes: true, attributeFilter: ['data-stage'] });
   });
-  await page.locator('#passphrase').fill(v2Fixture.passphrase);
-  await page.locator('#email').fill(v2Fixture.email);
+  await page.locator('#passphrase').fill(fixture.passphrase);
+  await page.locator('#email').fill(fixture.email);
   await page.locator('#generate-button').click();
   await expect(page.locator('#progress-state')).toHaveAttribute('data-stage', 'argon2id');
   await expect(page.locator('#progress-state')).toContainText('512 MiB');
@@ -359,18 +361,14 @@ test('default V2 reports real stages and retains explicit V1 recovery', async ({
     contentType: 'text/plain',
   });
   await page.locator('#toggle-phrase').click();
-  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(
-    v2Fixture.mnemonic.split(' '),
-  );
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
   const stages = await page.evaluate(() => window.testStages);
   expect(stages.filter((stage) => ['argon2id', 'pbkdf2', 'addresses'].includes(stage))).toEqual([
     'argon2id',
     'pbkdf2',
     'addresses',
   ]);
-  await page.locator('#profile-select').selectOption('brainbip-v1');
+  await page.locator('#reset-button').click();
   await expect(page.locator('#result-state')).toBeHidden();
   await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
-  await page.locator('#reset-button').click();
-  await expect(page.locator('#profile-select')).toHaveValue('brainbip-v2');
 });

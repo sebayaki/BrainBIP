@@ -8,9 +8,9 @@ Anyone who reproduces your inputs can reproduce the wallet. An attacker can test
 
 Argon2id raises the memory and computation cost of each guess. PBKDF2 supplies a second, separately salted derivation branch. Their outputs are combined before generating twelve BIP39 words. This composition does **not** create entropy, and two branches do not imply twice the security. A predictable phrase remains predictable even when each guess costs more.
 
-The v2 profile increases fixed derivation costs. A slower run in this browser is not a measurement of an attacker's optimized guessing cost, and it does not establish a specific security level. Both profiles remain custom, unaudited constructions.
+The fixed derivation has substantial memory and computation costs. A slower run in this browser is not a measurement of an attacker's optimized guessing cost, and it does not establish a specific security level. This remains a custom, unaudited construction.
 
-Twelve BIP39 words encode 128 entropy bits plus a checksum. That is the output format's capacity, not proof that a user-chosen passphrase has 128 bits of strength. A longer output encoding, including Monero's 25-word export, adds no secrecy to the original inputs. Ordinary signing keys used by these chains are not post-quantum secure.
+Twelve BIP39 words encode 128 entropy bits plus a checksum. That is the output format's capacity, not proof that a user-chosen passphrase has 128 bits of strength. A longer output encoding adds no secrecy to the original inputs. Ordinary signing keys used by these chains are not post-quantum secure.
 
 ## Email and strength estimates
 
@@ -32,19 +32,15 @@ Copying is explicit. **Reset does not clear the system clipboard**, and other ap
 
 ## Recovery depends on the exact mapping
 
-The [derivation specification](derivation.md) defines the fixed `brainbip-v1` and `brainbip-v2` input mappings and the shared `ledger-bip39-v1` Monero extension. App release versions identify software builds separately. Cost parameters never adapt to slower devices: a failed computation does not silently produce a different wallet.
-
-**The profile is part of recovery.** V2 is the default for new generation; choose v1 to reproduce a wallet created by the original profile. The same passphrase and email produce different wallets under v1 and v2. Selecting another profile does not upgrade or move an existing wallet or its funds.
+The [derivation specification](derivation.md) defines one fixed input mapping for Bitcoin, Ethereum, Solana, and Zcash. App release versions identify software builds. Cost parameters never adapt to slower devices: a failed computation does not silently produce a different wallet.
 
 Recovery from memory requires the same normalized passphrase, optional email salt, and mapping. Losing or changing those inputs can make the wallet inaccessible. Recovery from the generated BIP39 words requires the stated chain paths and an empty additional BIP39 passphrase; external wallet discovery varies.
-
-Standard Monero seed import uses the separate 25-word legacy phrase, with an empty seed-offset passphrase. It restores only the Monero wallet. Set the restore date or height at or before the first incoming transaction and verify the primary address. Trezor's Monero derivation differs from the Ledger mapping used here.
 
 All committed example phrases, keys, and addresses are **public test vectors**. Never deposit funds to them or submit real secrets in an issue, pull request, screenshot, or test fixture.
 
 ## Execution time and memory
 
-V2 requires 512 MiB of Argon2 memory, while v1 requires 256 MiB; both also need browser and library overhead. WebAssembly support alone does not guarantee that a device can allocate this memory. Browser memory pressure or allocation limits can stop generation. There is no automatic switch to another profile or reduction of cost.
+The derivation requires 512 MiB of Argon2 memory plus browser and library overhead. WebAssembly support alone does not guarantee that a device can allocate this memory. Browser memory pressure or allocation limits can stop generation. There is no automatic reduction of cost.
 
 An approximate ten-second generation time is a tuning target for a reference machine, not a promised duration on every device. Browser, hardware, available memory, and background load affect elapsed time. The interface reports elapsed time and actual stage boundaries, with indeterminate motion inside a stage. The bundled Argon2 API does not expose intermediate completion measurements. Completion is reported only after the actual computation returns.
 

@@ -42,7 +42,7 @@ export async function createNotices(usedInputs, root) {
     notices += `hash-wasm/src/${filename}\n${leadingNotice.trim()}\n\n`;
   }
   notices += `Go crypto (upstream of the hash-wasm Argon2 implementation)\nSource: https://github.com/golang/crypto\n${await readFile(path.join(root, 'licenses/Go-LICENSE'), 'utf8')}\n`;
-  notices += `Monero English mnemonic wordlist\nSource: https://github.com/monero-project/monero/blob/master/src/mnemonics/english.h\n${await readFile(path.join(root, 'licenses/Monero-LICENSE'), 'utf8')}\n`;
+  notices += `Cryptocurrency Icons — Bitcoin, Ethereum, Solana, Zcash\nSource: https://github.com/spothq/cryptocurrency-icons/tree/1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/black\nAdapted for inline SVG and currentColor.\n${await readFile(path.join(root, 'licenses/Cryptocurrency-Icons-LICENSE'), 'utf8')}\n`;
   notices +=
     '\nBLAKE2 reference implementation: the CC0 license option is used.\nhttps://creativecommons.org/publicdomain/zero/1.0/\n';
   notices +=

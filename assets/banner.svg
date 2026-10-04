@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
   <title id="title">BrainBIP</title>
-  <desc id="desc">A passphrase. Twelve words. Five chains. An offline-first experiment in deterministic wallet recovery.</desc>
+  <desc id="desc">A passphrase. Twelve words. Four chains. An offline-first experiment in deterministic wallet recovery.</desc>
   <rect width="1280" height="420" rx="24" fill="#f4f3ed"/>
   <g fill="none" stroke="#d9d8ce" stroke-width="1">
     <path d="M0 340H1280M870 0V420M1120 0V420"/>
@@ -10,7 +10,7 @@
   <rect x="70" y="52" width="178" height="29" rx="14.5" fill="#dbe6da"/>
   <text x="159" y="71" text-anchor="middle" fill="#242d28" font-family="monospace" font-size="12" letter-spacing="1.4">MEMORY → MNEMONIC</text>
   <text x="64" y="195" fill="#242d28" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" letter-spacing="-6">BrainBIP<tspan fill="#2f6b45">.</tspan></text>
-  <text x="71" y="250" fill="#242d28" font-family="Arial, Helvetica, sans-serif" font-size="28">A passphrase. Twelve words. Five chains.</text>
+  <text x="71" y="250" fill="#242d28" font-family="Arial, Helvetica, sans-serif" font-size="28">A passphrase. Twelve words. Four chains.</text>
   <text x="72" y="294" fill="#72766c" font-family="Arial, Helvetica, sans-serif" font-size="17">An offline-first experiment in deterministic wallet recovery.</text>
   <g transform="translate(944 152)" fill="#dbe6da" stroke="#2f6b45" stroke-width="2">
     <rect width="106" height="106" rx="25" transform="rotate(45 53 53)"/>

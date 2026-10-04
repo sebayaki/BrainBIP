@@ -3,7 +3,6 @@ const chainDetails = {
   eth: 'Ethereum · Receiving accounts · BIP44',
   sol: 'Solana · Ed25519 receiving accounts · hardened derivation',
   zec: 'Zcash · Transparent P2PKH addresses · no shielded privacy',
-  xmr: 'Monero · One primary address + 19 subaddresses · Account 0',
 };
 
 function renderWordGrid(grid, mnemonic, visible, visibleLabel, hiddenLabel) {
@@ -54,12 +53,7 @@ function renderAddresses(list, chain, rows) {
     const pathDetails = document.createElement('details');
     pathDetails.className = 'address-path-details';
     const pathLabel = document.createElement('summary');
-    pathLabel.textContent =
-      chain === 'xmr'
-        ? position === 0
-          ? 'Primary · 0 / 0'
-          : `Subaddress · 0 / ${entry.subaddress}`
-        : 'Derivation path';
+    pathLabel.textContent = 'Derivation path';
     const path = document.createElement('span');
     path.className = 'address-path';
     path.textContent = entry.path;
@@ -85,7 +79,6 @@ function renderAddresses(list, chain, rows) {
 export function createRecoveryView({ getElement: $, copyText }) {
   let currentResult = null;
   let phraseVisible = false;
-  let moneroPhraseVisible = false;
   let activeChain = 'btc';
 
   function renderMnemonic() {
@@ -101,16 +94,23 @@ export function createRecoveryView({ getElement: $, copyText }) {
       ? 'Keep these words private. Anyone with them controls the wallet.'
       : 'Hidden from view. Reveal when you are ready.';
   }
-  function renderMoneroMnemonic() {
-    const mnemonic = currentResult?.recovery?.xmr?.mnemonic;
-    renderWordGrid(
-      $('monero-mnemonic-grid'),
-      mnemonic,
-      moneroPhraseVisible,
-      'Twenty-five Monero recovery words',
-      'Monero recovery phrase hidden',
-    );
-    if (mnemonic) setRevealButton($('toggle-monero-phrase'), moneroPhraseVisible);
+  function revealTab(tab, instant = false) {
+    const strip = $('chain-tabs');
+    const stripBounds = strip.getBoundingClientRect();
+    const tabBounds = tab.getBoundingClientRect();
+    const leftEdge = stripBounds.left + strip.clientLeft + 4;
+    const rightEdge = stripBounds.left + strip.clientLeft + strip.clientWidth - 4;
+    let left = strip.scrollLeft;
+    if (tabBounds.left < leftEdge) left += tabBounds.left - leftEdge;
+    else if (tabBounds.right > rightEdge) left += tabBounds.right - rightEdge;
+    if (!instant && Math.abs(left - strip.scrollLeft) < 1) return;
+    strip.scrollTo({
+      left: Math.max(0, left),
+      behavior:
+        instant || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'instant'
+          : 'smooth',
+    });
   }
   function selectChain(chain, focus = false) {
     activeChain = chain;
@@ -118,27 +118,19 @@ export function createRecoveryView({ getElement: $, copyText }) {
       const selected = tab.dataset.chain === chain;
       tab.setAttribute('aria-selected', String(selected));
       tab.tabIndex = selected ? 0 : -1;
-      if (selected && focus) tab.focus();
+      if (selected) {
+        if (focus) tab.focus({ preventScroll: true });
+        revealTab(tab);
+      }
     }
     $('address-panel').setAttribute('aria-labelledby', `tab-${chain}`);
     $('chain-description').textContent = chainDetails[chain];
-    $('monero-recovery-panel').hidden = chain !== 'xmr' || !currentResult?.recovery?.xmr;
-    if (chain !== 'xmr') {
-      $('monero-recovery-details').open = false;
-      moneroPhraseVisible = false;
-      renderMoneroMnemonic();
-    }
     renderAddresses($('address-list'), chain, currentResult?.addresses[chain] || []);
   }
   function clear() {
     currentResult = null;
     phraseVisible = false;
-    moneroPhraseVisible = false;
     $('mnemonic-grid').replaceChildren();
-    $('monero-mnemonic-grid').replaceChildren();
-    $('monero-recovery-panel').hidden = true;
-    $('monero-recovery-details').open = false;
-    setRevealButton($('toggle-monero-phrase'), false);
     $('address-list').replaceChildren();
     $('chain-description').textContent = '';
     $('result-state').hidden = true;
@@ -159,7 +151,6 @@ export function createRecoveryView({ getElement: $, copyText }) {
     $('result-profile').textContent = result.profile;
     $('result-timing').textContent = `Derived locally in ${seconds}s`;
     renderMnemonic();
-    renderMoneroMnemonic();
     selectChain(activeChain);
   }
 
@@ -170,21 +161,6 @@ export function createRecoveryView({ getElement: $, copyText }) {
   });
   $('copy-phrase').addEventListener('click', () => {
     if (currentResult) copyText(currentResult.mnemonic, 'Recovery phrase');
-  });
-  $('toggle-monero-phrase').addEventListener('click', () => {
-    if (!currentResult?.recovery?.xmr) return;
-    moneroPhraseVisible = !moneroPhraseVisible;
-    renderMoneroMnemonic();
-  });
-  $('copy-monero-phrase').addEventListener('click', () => {
-    if (currentResult?.recovery?.xmr)
-      copyText(currentResult.recovery.xmr.mnemonic, 'Monero recovery phrase');
-  });
-  $('monero-recovery-details').addEventListener('toggle', () => {
-    if (!$('monero-recovery-details').open) {
-      moneroPhraseVisible = false;
-      renderMoneroMnemonic();
-    }
   });
   $('chain-tabs').addEventListener('click', (event) => {
     const tab = event.target.closest('[data-chain]');
@@ -209,6 +185,10 @@ export function createRecoveryView({ getElement: $, copyText }) {
     if (!button || !currentResult) return;
     const entry = currentResult.addresses[activeChain][Number(button.dataset.position)];
     if (entry) copyText(entry.address, `${activeChain.toUpperCase()} address`);
+  });
+
+  window.addEventListener('resize', () => {
+    if (currentResult) revealTab($(`tab-${activeChain}`), true);
   });
 
   return {

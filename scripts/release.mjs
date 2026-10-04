@@ -13,6 +13,6 @@ if (command === 'check') {
   console.log(`Release metadata verified: ${tag} (${date}).`);
 } else {
   console.log(
-    `# BrainBIP ${tag}\n\n${body}\n\n## Downloads\n\nDownload \`brainbip.html\` for the complete offline app. \`index.html\` contains the same bytes. \`VERSION.json\` identifies the application version; \`SHA256SUMS.txt\` covers the HTML, version metadata, license, and third-party notices.\n\nRecovery profiles are separate from the application version. Choose \`brainbip-v1\` to restore earlier wallets; the default \`brainbip-v2\` produces different recovery words for the same inputs. The \`ledger-bip39-v1\` Monero mapping is unchanged.\n\nExperimental, unaudited software. Never fund public test-vector addresses.\n`,
+    `# BrainBIP ${tag}\n\n${body}\n\n## Downloads\n\nDownload \`brainbip.html\` for the complete offline app. \`index.html\` contains the same bytes. \`VERSION.json\` identifies the application version; \`SHA256SUMS.txt\` covers the HTML, version metadata, license, and third-party notices.\n\nThis release uses the single fixed \`brainbip-v2\` derivation specification, separate from the application version.\n\nExperimental, unaudited software. Never fund public test-vector addresses.\n`,
   );
 }

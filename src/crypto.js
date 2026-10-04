@@ -9,12 +9,10 @@ import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { HDKey } from '@scure/bip32';
 import { base58, base58check, bech32 } from '@scure/base';
 import Slip10 from 'micro-key-producer/slip10.js';
-import { deriveMoneroWallet } from './monero.js';
 import { isUnicodeText, normalizeInputText } from './inputs.js';
-import { DEFAULT_PROFILE_ID, PROFILE_V1, getProfile } from './profiles.js';
+import { PROFILE } from './profiles.js';
 
-// Keep the legacy export tied to the original recovery specification.
-export const PROFILE = PROFILE_V1;
+export { PROFILE };
 
 const encoder = new TextEncoder();
 const INPUT_ERROR_MESSAGES = new Set([
@@ -24,7 +22,6 @@ const INPUT_ERROR_MESSAGES = new Set([
   'Passphrase and email must contain valid Unicode text.',
   'Enter a valid 12-word English BIP39 phrase.',
   'Address count must be an integer from 1 to 20.',
-  'Choose a supported derivation profile.',
 ]);
 
 // Only our fixed validation messages can leave the worker. Library errors may
@@ -114,7 +111,7 @@ function derivePath(root, path, wipeNode) {
   }
 }
 
-function deriveWalletMaterial(mnemonic, count = PROFILE.addressCount) {
+export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
   if (!Number.isInteger(count) || count < 1 || count > PROFILE.addressCount) {
     throw new RangeError('Address count must be an integer from 1 to 20.');
   }
@@ -164,9 +161,7 @@ function deriveWalletMaterial(mnemonic, count = PROFILE.addressCount) {
         wipeEdNode(child);
       }
     }
-    const monero = deriveMoneroWallet(seed, count);
-    addresses.xmr = monero.addresses;
-    return { addresses, recovery: { xmr: monero.recovery } };
+    return addresses;
   } finally {
     seed.fill(0);
     secpRoot?.wipePrivateData();
@@ -174,22 +169,12 @@ function deriveWalletMaterial(mnemonic, count = PROFILE.addressCount) {
   }
 }
 
-export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
-  return deriveWalletMaterial(mnemonic, count).addresses;
-}
-
-export async function deriveWallet(
-  passphrase,
-  email = '',
-  onStage = () => {},
-  profileId = DEFAULT_PROFILE_ID,
-) {
-  const profile = getProfile(profileId);
+export async function deriveWallet(passphrase, email = '', onStage = () => {}) {
   const normalized = normalizeInputs(passphrase, email);
   const password = encoder.encode(normalized.passphrase);
   const emailBytes = encoder.encode(normalized.email);
-  const argonSalt = concatBytes(encoder.encode(profile.argon2id.saltPrefix), emailBytes);
-  const pbkdfSalt = concatBytes(encoder.encode(profile.pbkdf2.saltPrefix), emailBytes);
+  const argonSalt = concatBytes(encoder.encode(PROFILE.argon2id.saltPrefix), emailBytes);
+  const pbkdfSalt = concatBytes(encoder.encode(PROFILE.pbkdf2.saltPrefix), emailBytes);
   let argonKey;
   let pbkdfKey;
   let mixed;
@@ -199,28 +184,28 @@ export async function deriveWallet(
     argonKey = await argon2id({
       password,
       salt: argonSalt,
-      memorySize: profile.argon2id.memoryKiB,
-      iterations: profile.argon2id.iterations,
-      parallelism: profile.argon2id.parallelism,
-      hashLength: profile.argon2id.outputBytes,
+      memorySize: PROFILE.argon2id.memoryKiB,
+      iterations: PROFILE.argon2id.iterations,
+      parallelism: PROFILE.argon2id.parallelism,
+      hashLength: PROFILE.argon2id.outputBytes,
       outputType: 'binary',
     });
     onStage('pbkdf2');
     pbkdfKey = await pbkdf2({
       password,
       salt: pbkdfSalt,
-      iterations: profile.pbkdf2.iterations,
-      hashLength: profile.pbkdf2.outputBytes,
+      iterations: PROFILE.pbkdf2.iterations,
+      hashLength: PROFILE.pbkdf2.outputBytes,
       hashFunction: createSHA256(),
       outputType: 'binary',
     });
-    mixed = new Uint8Array(profile.argon2id.outputBytes);
+    mixed = new Uint8Array(PROFILE.argon2id.outputBytes);
     for (let index = 0; index < mixed.length; index += 1)
       mixed[index] = argonKey[index] ^ pbkdfKey[index];
-    entropy = mixed.slice(0, profile.entropyBytes);
+    entropy = mixed.slice(0, PROFILE.entropyBytes);
     const mnemonic = entropyToMnemonic(entropy, wordlist);
     onStage('addresses');
-    return { mnemonic, ...deriveWalletMaterial(mnemonic), profile: profile.id };
+    return { mnemonic, addresses: deriveAddresses(mnemonic), profile: PROFILE.id };
   } finally {
     for (const buffer of [
       password,
