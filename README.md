@@ -1,6 +1,12 @@
 ![BrainBIP — A passphrase. Twelve words. Four chains.](assets/banner.svg)
 
 <p align="center">
+  <a href="https://sebayaki.github.io/BrainBIP/">Live demo ↗</a> ·
+  <a href="https://sebayaki.github.io/BrainBIP/brainbip.html">Standalone HTML</a> ·
+  <a href="https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt">SHA256 checksums</a>
+</p>
+
+<p align="center">
   <a href="#try-it-locally">Try it locally</a> ·
   <a href="docs/derivation.md">Derivation specification</a> ·
   <a href="#security-model">Security model</a> ·
@@ -11,7 +17,9 @@ BrainBIP turns a **passphrase + optional email salt** into a twelve-word BIP39 r
 
 Everything runs on your device. The build produces a complete HTML file with the interface, dictionaries, cryptographic code, and WebAssembly embedded. Open it in a browser, even without an internet connection.
 
-> **Experimental, unaudited software.** A memory-hard function makes guessing more expensive; it cannot give a predictable passphrase the security of randomly generated recovery words. The hosted demo and release downloads are not published yet.
+> **Experimental, unaudited software.** A memory-hard function makes guessing more expensive; it cannot give a predictable passphrase the security of randomly generated recovery words.
+
+In the live demo, select **Offline edition** to download the standalone HTML file. The direct HTML link above may open in your browser; use **Save link as** on that link to download the original file. Both links provide the same complete app.
 
 ## A small, complete tool
 
