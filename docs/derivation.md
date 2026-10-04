@@ -1,8 +1,10 @@
-# BrainBIP v1 derivation and recovery specification
+# BrainBIP derivation and recovery specification
 
-Profile identifier: **`brainbip-v1`**. This document specifies the deterministic mapping from inputs to a 12-word mnemonic and public addresses. The original BTC/ETH/SOL/ZEC outputs remain unchanged. Monero is an additive extension with the fixed mapping identifier **`ledger-bip39-v1`**. Changing normalization, byte encoding, a salt prefix, KDF parameters, output mixing, the BIP39 passphrase, an existing derivation path, or an existing address format requires a new profile identifier. V1 never reduces its costs according to the input, device, available memory, or execution time.
+Profile identifiers: **`brainbip-v1`** and **`brainbip-v2`**. This document preserves the original v1 mapping and specifies the higher-cost v2 profile. Both map inputs to a 12-word mnemonic and public addresses. V2 is the default for new generation; select v1 explicitly to reproduce an earlier v1 wallet. **The same inputs produce different wallets under the two profiles.** Changing profiles does not migrate funds or upgrade an existing wallet.
 
-BrainBIP v1 is a custom brain-wallet construction. Its output follows BIP39, but its passphrase-to-entropy construction is not BIP39, WarpWallet, or a standardized recovery scheme. A valid 12-word output does not establish 128 bits of security: resistance to guessing depends on the original inputs. A salt prevents shared precomputation; an email address is not assumed to be secret or unpredictable. This application and this construction have not received an independent security audit.
+V1 outputs remain unchanged. V2 uses the same normalization, output mixing, BIP39 conversion, and chain mappings, with its own fixed KDF parameters and salt prefixes in section 2. Monero uses the shared mapping identifier **`ledger-bip39-v1`**. Changing normalization, byte encoding, a salt prefix, KDF parameters, output mixing, the BIP39 passphrase, an existing derivation path, or an existing address format requires a new profile identifier. Neither profile reduces its costs according to the input, device, available memory, or execution time.
+
+BrainBIP profiles are custom brain-wallet constructions. Their output follows BIP39, but their passphrase-to-entropy construction is not BIP39, WarpWallet, or a standardized recovery scheme. A valid 12-word output does not establish 128 bits of security: resistance to guessing depends on the original inputs. A salt prevents shared precomputation; an email address is not assumed to be secret or unpredictable. This application and these constructions have not received an independent security audit.
 
 ## 1. Normalize and encode the inputs
 
@@ -16,7 +18,9 @@ Both inputs must be strings containing well-formed Unicode; lone UTF-16 surrogat
 
 An omitted, empty, or whitespace-only email produces `E` of length zero. Case and normalized passphrase whitespace affect the wallet. NFKC can merge compatibility-equivalent inputs, such as a full-width `＠` and ASCII `@`.
 
-## 2. Derive two independent 32-byte values
+## 2. Derive two separately salted 32-byte values
+
+### Original profile: `brainbip-v1`
 
 Here `||` means byte concatenation. The prefix-ending `\0` is **one U+0000 byte (`00`)**, not the two printable characters `\` and `0`. Neither salt is hashed, length-prefixed, or randomly extended.
 
@@ -49,6 +53,37 @@ Compute `B` independently from PBKDF2:
 | Output length | 32 bytes                  |
 
 The shipped implementation uses pinned hash-wasm Argon2id and PBKDF2/SHA256 code. Its WebAssembly binaries are embedded in the local JavaScript bundle; no runtime fetch is required. WebAssembly, sufficient memory, and ordinary browser execution are required. Allocation or execution failure stops generation; it never changes the profile. Total process memory exceeds the 256 MiB Argon2 memory parameter.
+
+### Default profile: `brainbip-v2`
+
+V2 uses exactly the same normalized `P` and `E` from section 1. Its salts are:
+
+```
+SA = UTF8("BrainBIP/v2/argon2id\0") || E
+SB = UTF8("BrainBIP/v2/pbkdf2\0")   || E
+```
+
+Compute `A` with Argon2id version 19, **524,288 KiB (512 MiB)** of memory, **16 passes**, parallelism **1**, and a **32-byte** output. Secret and associated data remain empty. Independently compute `B` with PBKDF2-HMAC-SHA256, **5,242,880 iterations**, and a **32-byte** output. Both branches use `P` as their password and their respective salts above. The remaining steps are unchanged.
+
+| Parameter                                | `brainbip-v1`                        | `brainbip-v2`            |
+| ---------------------------------------- | ------------------------------------ | ------------------------ |
+| Default for new generation               | No; explicit earlier-wallet recovery | Yes                      |
+| Argon2id version                         | 19                                   | 19                       |
+| Argon2 memory                            | 262,144 KiB / 256 MiB                | 524,288 KiB / 512 MiB    |
+| Argon2 passes                            | 3                                    | 16                       |
+| Argon2 parallelism                       | 1                                    | 1                        |
+| Argon2 output                            | 32 bytes                             | 32 bytes                 |
+| Argon2 salt prefix                       | `BrainBIP/v1/argon2id\0`             | `BrainBIP/v2/argon2id\0` |
+| PBKDF2 PRF                               | HMAC-SHA256                          | HMAC-SHA256              |
+| PBKDF2 iterations                        | 1,048,576                            | 5,242,880                |
+| PBKDF2 output                            | 32 bytes                             | 32 bytes                 |
+| PBKDF2 salt prefix                       | `BrainBIP/v1/pbkdf2\0`               | `BrainBIP/v2/pbkdf2\0`   |
+| XOR bytes used as BIP39 entropy          | First 16                             | First 16                 |
+| English mnemonic / additional passphrase | 12 words / empty                     | 12 words / empty         |
+
+The profile identifier is public recovery metadata, not another secret. The API `deriveWallet(passphrase, email, onStage, profileId)` defaults an omitted `profileId` to `brainbip-v2`; pass `brainbip-v1` explicitly for v1 recovery. The worker accepts the same selection as `profileId`, and the result's `profile` records the selected identifier. Unknown identifiers are rejected, never interpreted as a fallback.
+
+V2 was tuned toward approximately ten seconds on a reference machine. That target is not a duration guarantee or a measure of an attacker's cost. Total process memory exceeds the selected Argon2 memory parameter, and a browser may fail to allocate it. Generation then stops without reducing parameters or switching to v1. The interface shows elapsed time and actual stage transitions; the bundled Argon2 API has no intermediate progress callback and does not supply a completion percentage.
 
 ## 3. Produce the mnemonic and BIP39 seed
 
@@ -130,11 +165,13 @@ For XMR, standard Monero GUI/CLI recovery does **not** import the twelve BIP39 w
 
 The private-email UI switch is **off by default and affects strength estimates only**. Both positions use identical normalization, email salt, KDF parameters, mnemonic, and addresses. Public-email strength credit is zero; any private-email credit is conditional on the user's unverified secrecy and independence assumption.
 
-Recovering from the original passphrase and email also requires this exact **v1 profile**. Keep a copy of this public specification or the verified offline release; neither is a secret. Future parameter changes must retain v1 recovery support or publish a separate release that implements it.
+Recovering from the original passphrase and email requires the exact profile originally selected: **`brainbip-v1` or `brainbip-v2`**. Select v1 for an original v1 wallet even though the current default is v2. Keep the identifier and a copy of this public specification or the verified offline release; none is a secret. A slower or memory-limited device cannot recover a v2 wallet by selecting v1. Recovery from the generated words uses the same chain mappings regardless of the original profile. Future parameter changes must retain existing recovery support or publish separate releases that implement it.
 
 ## 6. Test vectors and execution lifecycle
 
 `tests/fixtures/brainbip-v1.json` is a **public, full-cost v1 test vector** including raw and normalized inputs, salts, intermediate outputs, mnemonic, BIP39 seed, and eighty addresses. **Never deposit funds to addresses derived from test vectors.** Its Argon2 output was generated with the independent noble-hashes JavaScript implementation; the normal test suite checks the hash-wasm production implementation against it. PBKDF2 and HD/address fixtures are independently checked with Node/OpenSSL and separate test encoders.
+
+`tests/fixtures/brainbip-v2.json` is a separate **public, full-cost v2 test vector**. It uses the same public passphrase/email case with the fixed v2 salts and costs, and records its own intermediate outputs, twelve words, BIP39 seed, and eighty BTC/ETH/SOL/ZEC addresses. Its Argon2 output was generated with noble-hashes JavaScript; PBKDF2, BIP39 seed, and HD/address references use Node/OpenSSL and separate encoders. The production tests compare the complete Argon2 output and end-to-end wallet against this reference. V2 fixture generation does not replace or rewrite the original v1 fixture.
 
 That original fixture remains unchanged. `tests/fixtures/monero-ledger-v1.json` records separate Monero extension vectors for the published Ledger test mnemonic and the original BrainBIP example. The official Ledger public-key and stagenet-address vectors verify the BIP39-to-Monero mapping. Both generated 25-word phrases were restored independently using **monero-ts 0.11.3's Monero C++ WebAssembly implementation**, with networking disabled; the native phrases round-tripped exactly and all twenty mainnet addresses per wallet matched. This includes primary index `0` and subaddress indexes `1…19`. Fixture provenance identifies the reference binary; the native reference is a verification tool, not a production dependency.
 
@@ -159,3 +196,5 @@ Each generation runs in a fresh worker. It reports the stages `argon2id`, `pbkdf
 - [Monero mnemonic recovery](https://www.getmonero.org/resources/user-guides/restore_account.html) and [Trezor Monero derivation compatibility](https://trezor.io/learn/supported-assets/other-cryptocurrencies/what-is-monero-and-how-does-it-work-with-trezor)
 - [monero-ts native Monero WebAssembly reference](https://github.com/woodser/monero-ts)
 - [hash-wasm implementation](https://github.com/Daninet/hash-wasm)
+- [hash-wasm 4.12.0 Argon2 API](https://github.com/Daninet/hash-wasm/blob/v4.12.0/lib/argon2.ts)
+- [WebAssembly memory allocation](https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/JavaScript_interface/Memory/Memory)

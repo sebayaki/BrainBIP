@@ -1,6 +1,6 @@
 # Changelog
 
-Application versions describe the interface, packaging, and supported features. The recovery profiles `brainbip-v1` and `ledger-bip39-v1` are versioned separately and remain fixed.
+Application versions describe the interface, packaging, and supported features. The recovery profiles `brainbip-v1`, `brainbip-v2`, and `ledger-bip39-v1` are versioned separately and remain fixed.
 
 ## [Unreleased]
 
@@ -12,6 +12,9 @@ The first tagged release brings the existing public previews together with a mai
 
 ### Added
 
+- A higher-cost `brainbip-v2` profile for new generation: Argon2id uses 512 MiB, 16 passes, and one lane; PBKDF2-HMAC-SHA256 uses 5,242,880 iterations. The original v1 profile remains selectable for recovery.
+- Separate full-cost v2 fixtures from independent Argon2, PBKDF2, BIP39, and address reference implementations, preserving the original v1 vectors.
+- Elapsed time and stage-based loading during derivation, without an invented completion percentage or guaranteed execution time.
 - Monero primary address and nineteen subaddresses, with a separate native 25-word recovery phrase using the frozen Ledger mapping.
 - An opt-in private-email estimate switch. It starts off and never changes the generated wallet.
 - Mobile WebKit coverage, native Monero interoperability fixtures, and independent reference checks for all forty Monero fixture addresses.
@@ -26,8 +29,8 @@ The first tagged release brings the existing public previews together with a mai
 
 ### Recovery compatibility
 
-- Existing passphrase/email inputs still produce the same twelve BIP39 words and BTC, ETH, SOL, and ZEC addresses.
-- Argon2id and PBKDF2 parameters, input normalization, and existing derivation paths are unchanged.
+- Selecting `brainbip-v1` preserves existing passphrase/email inputs, twelve BIP39 words, and BTC, ETH, SOL, and ZEC addresses.
+- V1 Argon2id and PBKDF2 parameters, input normalization, and existing derivation paths are unchanged. V2 is the default for new generation and produces a different wallet from the same inputs; it does not migrate an existing wallet.
 - Monero restoration in ordinary software wallets uses the separate 25-word phrase; the twelve BIP39 words are not a native Monero seed.
 
 ## Preview history

@@ -155,6 +155,7 @@ export function createRecoveryView({ getElement: $, copyText }) {
     $('empty-state').hidden = true;
     $('result-state').hidden = false;
     $('profile-tag').hidden = false;
+    $('profile-tag').textContent = result.profile.replace('brainbip-', '').toUpperCase();
     $('result-profile').textContent = result.profile;
     $('result-timing').textContent = `Derived locally in ${seconds}s`;
     renderMnemonic();

@@ -25,23 +25,26 @@ The interface, cryptographic code, dictionaries, fonts, and WebAssembly fit in *
 ## Use BrainBIP
 
 1. Open the [demo](https://sebayaki.github.io/BrainBIP/) or download the [offline edition](https://sebayaki.github.io/BrainBIP/brainbip.html). The demo's **Offline edition** button saves the complete app; open that file locally to work without a connection.
-2. Enter a passphrase and, optionally, an email salt. Select **Generate recovery phrase**.
+2. Enter a passphrase and, optionally, an email salt. **V2** is the default for new generation; choose **V1 · Restore an earlier wallet** to reproduce an original v1 wallet. Select **Generate recovery phrase**.
 3. Reveal the twelve words and browse the five address tabs. The Monero tab also provides its own 25-word recovery phrase.
 4. Select **Clear & reset** to discard inputs and results. Your system clipboard is not cleared.
 
 Use [Releases](https://github.com/sebayaki/BrainBIP/releases) for versioned downloads. The hosted demo follows `main`. Verify downloads against their accompanying `SHA256SUMS.txt`; the hosted checksum file is [available here](https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt).
 
-The app requires a modern browser with WebAssembly and Web Workers, plus **256 MiB of derivation memory and browser overhead**. It never lowers the computation cost automatically.
+The app requires a modern browser with WebAssembly and Web Workers, plus **512 MiB of derivation memory for v2** or **256 MiB for v1**, with additional browser overhead. Some devices cannot allocate this memory. It never lowers the computation cost or switches profiles automatically. Execution time varies by device; the interface shows elapsed time and the current stage.
 
 ## What it does
 
 - **Deterministic recovery:** the same normalized inputs and fixed derivation mappings reproduce the same wallet.
+- **Versioned profiles:** higher-cost v2 for new generation, with original v1 recovery preserved.
 - **One hundred addresses:** twenty per chain, with derivation paths and Monero subaddress indexes.
 - **Explicit secret controls:** reveal, hide, copy, cancel, and reset.
 - **Local guesswork estimates:** dictionary-aware feedback; the private-email switch starts **OFF** and changes the estimate only.
 - **Portable offline use:** an embedded build with checksums and third-party notices.
 
 ## Recovery and compatibility
+
+**Use the same profile to recover from your passphrase and email.** V1 and v2 produce different recovery words and addresses from the same inputs. Choosing v2 does not upgrade an existing v1 wallet or move its funds. Keep the profile identifier with the public recovery specification.
 
 The generated English BIP39 phrase uses an **empty additional BIP39 passphrase**. Your original BrainBIP passphrase is already used to derive the words; do not enter it again as another wallet's additional passphrase.
 
@@ -57,7 +60,7 @@ The generated English BIP39 phrase uses an **empty additional BIP39 passphrase**
 
 Import support and address discovery vary between wallets; matching words alone do not guarantee matching addresses. Zcash shielded and Unified Addresses are outside this app's scope. BrainBIP displays receiving addresses and does not query balances or sign transactions.
 
-Application versions are separate from the fixed recovery identifiers **`brainbip-v1`** and **`ledger-bip39-v1`**. Keep the [derivation specification](docs/derivation.md) or a verified offline release available for recovery.
+Application versions are separate from the fixed recovery identifiers **`brainbip-v1`**, **`brainbip-v2`**, and the shared Monero mapping **`ledger-bip39-v1`**. Keep the [derivation specification](docs/derivation.md) or a verified offline release available for recovery.
 
 ## Build and contribute
 

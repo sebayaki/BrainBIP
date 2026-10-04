@@ -22,6 +22,13 @@ import {
   deriveWallet,
   safeErrorMessage,
 } from '../src/crypto.js';
+import {
+  PROFILES,
+  DEFAULT_PROFILE_ID,
+  PROFILE_V1,
+  PROFILE_V2,
+  getProfile,
+} from '../src/profiles.js';
 
 const standardMnemonic =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -197,7 +204,68 @@ async function referenceAddresses(mnemonic, count = 20) {
 
 // Explicit maintainer-only fixture generation. This derives public test data
 // through separate implementations; normal test runs never rewrite fixtures.
-if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
+if (process.env.BRAINBIP_GENERATE_V2_FIXTURE === '1') {
+  const legacy = await fixture('brainbip-v1.json');
+  const profile = getProfile('brainbip-v2');
+  const passphrase = legacy.passphrase;
+  const email = legacy.email;
+  const normalizedPassphrase = passphrase.normalize('NFKC');
+  const normalizedEmail = email.normalize('NFKC').trim();
+  const password = Buffer.from(normalizedPassphrase);
+  const argonSalt = Buffer.from(profile.argon2id.saltPrefix + normalizedEmail);
+  const pbkdfSalt = Buffer.from(profile.pbkdf2.saltPrefix + normalizedEmail);
+  const started = performance.now();
+  const argonKey = await referenceArgon2id(password, argonSalt, {
+    m: profile.argon2id.memoryKiB,
+    t: profile.argon2id.iterations,
+    p: profile.argon2id.parallelism,
+    version: profile.argon2id.version,
+    dkLen: profile.argon2id.outputBytes,
+  });
+  console.log(`Independent v2 Argon2id reference: ${(performance.now() - started).toFixed(0)} ms`);
+  const pbkdfKey = pbkdf2Sync(
+    password,
+    pbkdfSalt,
+    profile.pbkdf2.iterations,
+    profile.pbkdf2.outputBytes,
+    'sha256',
+  );
+  const entropy = Buffer.from(argonKey.slice(0, profile.entropyBytes)).map(
+    (byte, index) => byte ^ pbkdfKey[index],
+  );
+  const mnemonic = referenceMnemonic(entropy);
+  const production = {
+    warning: 'PUBLIC TEST VECTOR. NEVER DEPOSIT FUNDS TO THESE ADDRESSES.',
+    provenance:
+      'Argon2id: noble-hashes independent JS implementation, cross-checked by production hash-wasm; PBKDF2, BIP39 seed, HD keys and address reference: Node/OpenSSL plus the independent test encoders.',
+    profile: profile.id,
+    passphrase,
+    email,
+    normalizedPassphrase,
+    normalizedEmail,
+    argonSaltHex: argonSalt.toString('hex'),
+    pbkdfSaltHex: pbkdfSalt.toString('hex'),
+    argonKeyHex: Buffer.from(argonKey).toString('hex'),
+    pbkdfKeyHex: pbkdfKey.toString('hex'),
+    entropyHex: entropy.toString('hex'),
+    mnemonic,
+    bip39SeedHex: pbkdf2Sync(
+      Buffer.from(mnemonic.normalize('NFKD')),
+      Buffer.from('mnemonic'),
+      2048,
+      64,
+      'sha512',
+    ).toString('hex'),
+    addresses: await referenceAddresses(mnemonic),
+  };
+  await writeFile(
+    new URL('brainbip-v2.json', fixturesDirectory),
+    JSON.stringify(production, null, 2) + '\n',
+  );
+  for (const buffer of [password, argonSalt, pbkdfSalt, argonKey, pbkdfKey, entropy])
+    buffer.fill(0);
+  console.log('Public v2 independent reference fixture generated; v1 fixtures unchanged.');
+} else if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
   await mkdir(fixturesDirectory, { recursive: true });
   const standard = {
     provenance:
@@ -280,6 +348,71 @@ if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
     assert.throws(() => {
       PROFILE.argon2id.memoryKiB = 8;
     }, TypeError);
+  });
+
+  test('v2 is the default fixed profile and shares only unchanged recovery conventions with v1', () => {
+    assert.equal(PROFILE, PROFILE_V1);
+    assert.equal(DEFAULT_PROFILE_ID, 'brainbip-v2');
+    assert.equal(getProfile('brainbip-v1'), PROFILE_V1);
+    assert.equal(getProfile(DEFAULT_PROFILE_ID), PROFILE_V2);
+    assert.deepEqual(PROFILE_V2.argon2id, {
+      version: 19,
+      memoryKiB: 524288,
+      iterations: 16,
+      parallelism: 1,
+      outputBytes: 32,
+      saltPrefix: 'BrainBIP/v2/argon2id\0',
+    });
+    assert.deepEqual(PROFILE_V2.pbkdf2, {
+      hash: 'SHA-256',
+      iterations: 5242880,
+      outputBytes: 32,
+      saltPrefix: 'BrainBIP/v2/pbkdf2\0',
+    });
+    for (const name of [
+      'maxPassphraseCharacters',
+      'maxEmailCharacters',
+      'addressCount',
+      'entropyBytes',
+      'mnemonicWords',
+      'bip39Passphrase',
+      'paths',
+    ]) {
+      assert.deepEqual(PROFILE_V2[name], PROFILE_V1[name]);
+    }
+    for (const value of [
+      PROFILES,
+      PROFILE_V2,
+      PROFILE_V2.argon2id,
+      PROFILE_V2.pbkdf2,
+      PROFILE_V2.paths,
+    ])
+      assert.ok(Object.isFrozen(value));
+  });
+
+  test('unknown profiles are rejected before any derivation stage without fallback or reflected input', async () => {
+    const message = 'Choose a supported derivation profile.';
+    for (const id of [
+      undefined,
+      null,
+      '',
+      'brainbip-v3',
+      'BrainBIP-v2',
+      'constructor',
+      '__proto__',
+      1,
+      {},
+    ]) {
+      assert.throws(() => getProfile(id), { message });
+      if (id === undefined) continue; // deriveWallet's omitted argument uses the explicit default.
+      const stages = [];
+      await assert.rejects(
+        deriveWallet('public test only', '', (stage) => stages.push(stage), id),
+        { message },
+      );
+      assert.deepEqual(stages, []);
+    }
+    assert.equal(safeErrorMessage(new Error(message)), message);
   });
 
   test('normalization preserves passphrase whitespace and all case, trims only email', () => {
@@ -443,8 +576,11 @@ if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
       const expected = await fixture('brainbip-v1.json');
       const stages = [];
       const started = performance.now();
-      const actual = await deriveWallet(expected.passphrase, expected.email, (stage) =>
-        stages.push(stage),
+      const actual = await deriveWallet(
+        expected.passphrase,
+        expected.email,
+        (stage) => stages.push(stage),
+        'brainbip-v1',
       );
       context.diagnostic(
         `Full 256 MiB Argon2id + 1,048,576 PBKDF2 + 100 addresses: ${(performance.now() - started).toFixed(0)} ms`,
@@ -477,6 +613,64 @@ if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
         .map((byte, index) => byte ^ pbkdfKey[index]);
       assert.equal(entropy.toString('hex'), expected.entropyHex);
       assert.equal(referenceMnemonic(entropy), actual.mnemonic);
+    },
+  );
+
+  test(
+    'default v2 uses full fixed costs and matches independent Argon2id/OpenSSL reference data',
+    { timeout: 120000 },
+    async (context) => {
+      const expected = await fixture('brainbip-v2.json');
+      const legacy = await fixture('brainbip-v1.json');
+      const stages = [];
+      const started = performance.now();
+      const actual = await deriveWallet(expected.passphrase, expected.email, (stage) =>
+        stages.push(stage),
+      );
+      context.diagnostic(
+        `Full v2 512 MiB/t16 Argon2id + 5,242,880 PBKDF2 + 100 addresses: ${(performance.now() - started).toFixed(0)} ms`,
+      );
+      assert.deepEqual(stages, ['argon2id', 'pbkdf2', 'addresses']);
+      assert.deepEqual(
+        {
+          profile: actual.profile,
+          mnemonic: actual.mnemonic,
+          addresses: originalChains(actual.addresses),
+        },
+        { profile: 'brainbip-v2', mnemonic: expected.mnemonic, addresses: expected.addresses },
+      );
+      assert.notEqual(actual.mnemonic, legacy.mnemonic);
+      assert.equal(
+        Buffer.from(mnemonicToSeedSync(actual.mnemonic, '')).toString('hex'),
+        expected.bip39SeedHex,
+      );
+      assert.deepEqual(await referenceAddresses(actual.mnemonic), expected.addresses);
+      assert.equal(actual.addresses.xmr.length, 20);
+      assert.equal(actual.recovery.xmr.mnemonic.split(' ').length, 25);
+      const password = Buffer.from(expected.normalizedPassphrase);
+      const argonSalt = Buffer.from(expected.argonSaltHex, 'hex');
+      const pbkdfSalt = Buffer.from(expected.pbkdfSaltHex, 'hex');
+      assert.equal(argonSalt.toString('utf8'), 'BrainBIP/v2/argon2id\0' + expected.normalizedEmail);
+      assert.equal(pbkdfSalt.toString('utf8'), 'BrainBIP/v2/pbkdf2\0' + expected.normalizedEmail);
+      const argonKey = await argon2id({
+        password,
+        salt: argonSalt,
+        memorySize: 524288,
+        iterations: 16,
+        parallelism: 1,
+        hashLength: 32,
+        outputType: 'binary',
+      });
+      assert.equal(Buffer.from(argonKey).toString('hex'), expected.argonKeyHex);
+      const pbkdfKey = pbkdf2Sync(password, pbkdfSalt, 5242880, 32, 'sha256');
+      assert.equal(pbkdfKey.toString('hex'), expected.pbkdfKeyHex);
+      const entropy = Buffer.from(argonKey.slice(0, 16)).map(
+        (byte, index) => byte ^ pbkdfKey[index],
+      );
+      assert.equal(entropy.toString('hex'), expected.entropyHex);
+      assert.equal(referenceMnemonic(entropy), actual.mnemonic);
+      for (const bytes of [password, argonSalt, pbkdfSalt, argonKey, pbkdfKey, entropy])
+        bytes.fill(0);
     },
   );
 }

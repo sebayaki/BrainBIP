@@ -161,6 +161,17 @@
                 <p class="estimate-caveat">Estimate, not measured entropy.</p>
               </div>
 
+              <div class="form-field profile-field">
+                <label for="profile-select">Derivation version</label>
+                <select id="profile-select" name="profile" aria-describedby="profile-help">
+                  <option value="brainbip-v2" selected>V2 · Stronger derivation</option>
+                  <option value="brainbip-v1">V1 · Restore an earlier wallet</option>
+                </select>
+                <p id="profile-help" class="profile-help">
+                  To restore a wallet, use the same version.
+                </p>
+              </div>
+
               <div id="input-error" class="error-message" role="alert" hidden></div>
               <div class="generate-row">
                 <button id="generate-button" class="button button-primary" type="submit" disabled>
@@ -191,13 +202,14 @@
             class="output-panel panel"
             aria-labelledby="output-heading"
             aria-busy="false"
+            tabindex="-1"
           >
             <div class="panel-heading output-heading">
               <div>
                 <p class="panel-kicker">02 / RECOVERY</p>
                 <h2 id="output-heading">Your wallet, derived.</h2>
               </div>
-              <span id="profile-tag" class="profile-tag" hidden>V1</span>
+              <span id="profile-tag" class="profile-tag" hidden>V2</span>
             </div>
 
             <div id="empty-state" class="empty-state">
@@ -225,30 +237,129 @@
               </div>
             </div>
 
-            <div id="progress-state" class="progress-state" hidden>
-              <div class="progress-symbol" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-              <h3>Turning memory into recovery.</h3>
-              <p>Computing on your device. This may take a moment.</p>
+            <div
+              id="progress-state"
+              class="progress-state"
+              data-stage="idle"
+              data-running="false"
+              hidden
+            >
+              <div class="progress-heading">
+                <div>
+                  <h3>Memory, at work.</h3>
+                  <p>Deriving your wallet on this device.</p>
+                </div>
+                <div class="progress-runtime">
+                  <span>Elapsed</span>
+                  <time id="progress-elapsed" datetime="PT0S">00:00</time>
+                </div>
+              </div>
+              <div class="derivation-visual" aria-hidden="true">
+                <svg class="derivation-schematic" viewBox="0 0 440 160" fill="none">
+                  <path class="schematic-wire" d="M138 80h40m84 0h40" />
+                  <g class="memory-zone">
+                    <path
+                      class="memory-outline"
+                      d="M83 19c-11-10-29-3-31 11-15-2-27 9-26 24-12 8-14 25-3 35-7 15 2 31 17 33 1 17 20 25 33 15l10-9m0-109c11-10 29-3 31 11 15-2 27 9 26 24 12 8 14 25 3 35 7 15-2 31-17 33-1 17-20 25-33 15l-10-9V19"
+                    />
+                    <g class="memory-cells">
+                      <rect x="44" y="47" width="12" height="12" rx="2" />
+                      <rect x="62" y="47" width="12" height="12" rx="2" />
+                      <rect x="92" y="47" width="12" height="12" rx="2" />
+                      <rect x="110" y="47" width="12" height="12" rx="2" />
+                      <rect x="35" y="65" width="12" height="12" rx="2" />
+                      <rect x="53" y="65" width="12" height="12" rx="2" />
+                      <rect x="92" y="65" width="12" height="12" rx="2" />
+                      <rect x="110" y="65" width="12" height="12" rx="2" />
+                      <rect x="35" y="83" width="12" height="12" rx="2" />
+                      <rect x="53" y="83" width="12" height="12" rx="2" />
+                      <rect x="101" y="83" width="12" height="12" rx="2" />
+                      <rect x="119" y="83" width="12" height="12" rx="2" />
+                      <rect x="44" y="101" width="12" height="12" rx="2" />
+                      <rect x="62" y="101" width="12" height="12" rx="2" />
+                      <rect x="92" y="101" width="12" height="12" rx="2" />
+                      <rect x="110" y="101" width="12" height="12" rx="2" />
+                    </g>
+                  </g>
+                  <g class="cpu-zone">
+                    <circle class="cpu-track" cx="220" cy="80" r="42" />
+                    <g class="cpu-orbit">
+                      <path d="M220 38a42 42 0 0 1 42 42" />
+                      <circle cx="220" cy="38" r="3" />
+                    </g>
+                    <path
+                      class="cpu-pins"
+                      d="M209 52v8m11-8v8m11-8v8m-22 40v8m11-8v8m11-8v8m-39-39h8m-8 11h8m-8 11h8m40-22h8m-8 11h8m-8 11h8"
+                    />
+                    <rect class="cpu-shell" x="200" y="60" width="40" height="40" rx="6" />
+                    <path class="cpu-core" d="M211 73h18m-18 7h18m-18 7h10" />
+                  </g>
+                  <g class="output-zone">
+                    <path
+                      class="output-branches"
+                      d="M302 80h18V36h20m-20 22h20m-38 22h38m-20 0v44h20m-20-22h20"
+                    />
+                    <g class="output-node">
+                      <rect x="340" y="27" width="68" height="18" rx="4" />
+                      <path d="M348 36h8m8 0h32" />
+                    </g>
+                    <g class="output-node">
+                      <rect x="340" y="49" width="68" height="18" rx="4" />
+                      <path d="M348 58h8m8 0h32" />
+                    </g>
+                    <g class="output-node">
+                      <rect x="340" y="71" width="68" height="18" rx="4" />
+                      <path d="M348 80h8m8 0h32" />
+                    </g>
+                    <g class="output-node">
+                      <rect x="340" y="93" width="68" height="18" rx="4" />
+                      <path d="M348 102h8m8 0h32" />
+                    </g>
+                    <g class="output-node">
+                      <rect x="340" y="115" width="68" height="18" rx="4" />
+                      <path d="M348 124h8m8 0h32" />
+                    </g>
+                  </g>
+                </svg>
+                <div class="schematic-labels">
+                  <span>Memory</span><span>Compute</span><span>Recovery</span>
+                </div>
+              </div>
+              <div class="progress-toolbar">
+                <div class="progress-caption">
+                  <span id="progress-stage-label">Preparing</span>
+                  <span id="progress-completed">0 / 3 complete</span>
+                </div>
+                <button id="progress-cancel-button" class="button button-secondary" type="button">
+                  Cancel
+                </button>
+              </div>
               <ol id="stage-list" class="stage-list">
-                <li data-stage="argon2id">
+                <li data-stage="argon2id" data-state="upcoming">
                   <span class="stage-marker">1</span>
-                  <div><strong>Memory-hard derivation</strong><small>Argon2id</small></div>
-                  <span class="stage-status">Waiting</span>
-                </li>
-                <li data-stage="pbkdf2">
-                  <span class="stage-marker">2</span>
-                  <div><strong>Second derivation</strong><small>PBKDF2-SHA256</small></div>
-                  <span class="stage-status">Waiting</span>
-                </li>
-                <li data-stage="addresses">
-                  <span class="stage-marker">3</span>
                   <div>
-                    <strong>Words &amp; receiving addresses</strong><small>Five networks</small>
+                    <strong>Memory derivation</strong
+                    ><small id="progress-memory-meta">Argon2id</small>
                   </div>
                   <span class="stage-status">Waiting</span>
                 </li>
+                <li data-stage="pbkdf2" data-state="upcoming">
+                  <span class="stage-marker">2</span>
+                  <div>
+                    <strong>CPU derivation</strong
+                    ><small id="progress-cpu-meta">PBKDF2-SHA256</small>
+                  </div>
+                  <span class="stage-status">Waiting</span>
+                </li>
+                <li data-stage="addresses" data-state="upcoming">
+                  <span class="stage-marker">3</span>
+                  <div><strong>Recovery outputs</strong><small>12 words · 5 networks</small></div>
+                  <span class="stage-status">Waiting</span>
+                </li>
               </ol>
-              <p class="progress-hint">Editing an input cancels this computation.</p>
+              <div class="progress-footer">
+                <p class="progress-hint">Editing an input cancels this work.</p>
+              </div>
             </div>
 
             <div id="result-state" class="result-state" hidden>
@@ -388,7 +499,7 @@
                 <span
                   ><span class="tiny-dot" aria-hidden="true"></span
                   ><span id="result-timing">Derived locally</span></span
-                ><span id="result-profile">brainbip-v1</span>
+                ><span id="result-profile">brainbip-v2</span>
               </div>
             </div>
           </section>
@@ -533,15 +644,22 @@
             </details>
             <details id="about-details">
               <summary>
-                <span>Derivation profile · brainbip-v1</span
+                <span>Derivation versions</span
                 ><span class="details-toggle" aria-hidden="true">+</span>
               </summary>
               <div class="doc-content">
                 <p>
-                  The fixed profile combines Argon2id with PBKDF2-SHA256 before generating twelve
-                  BIP39 words. Argon2id uses 256 MiB of memory, 3 passes, and 1 lane; PBKDF2-SHA256
-                  uses 1,048,576 iterations. Parameters are never reduced automatically on slower
-                  devices.
+                  V2 is the default. It combines Argon2id with PBKDF2-SHA256 before generating
+                  twelve BIP39 words. Argon2id uses 512 MiB of memory, 16 passes, and 1 lane;
+                  PBKDF2-SHA256 uses 5,242,880 iterations. V1 uses 256 MiB, 3 passes, and 1 lane,
+                  followed by 1,048,576 PBKDF2-SHA256 iterations. Parameters are never reduced
+                  automatically on slower devices.
+                </p>
+                <p>
+                  The same inputs produce different wallets in V1 and V2. To restore an earlier
+                  wallet, select its original version. The elapsed clock measures time; stage
+                  completion follows the actual computation. Animation within a stage does not
+                  measure its progress.
                 </p>
                 <p>
                   Keep the derivation profile available for recovery. Twelve output words have a

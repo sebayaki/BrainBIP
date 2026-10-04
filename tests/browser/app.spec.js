@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 const fixture = JSON.parse(
   await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'),
 );
+const v2Fixture = JSON.parse(
+  await readFile(new URL('../fixtures/brainbip-v2.json', import.meta.url), 'utf8'),
+);
 const moneroFixture = JSON.parse(
   await readFile(new URL('../fixtures/monero-ledger-v1.json', import.meta.url), 'utf8'),
 ).vectors.find((vector) => vector.id === 'brainbip-v1-public');
@@ -12,6 +15,7 @@ const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
 
 async function enterFixture(page) {
+  await page.locator('#profile-select').selectOption('brainbip-v1');
   await page.locator('#passphrase').fill(fixture.passphrase);
   await page.locator('#email').fill(fixture.email);
 }
@@ -248,6 +252,7 @@ test('long input is rejected explicitly instead of silently truncated into anoth
 
 test('private email is opt-in, updates only the estimate, and resets off', async ({ page }) => {
   await page.goto('/');
+  await page.locator('#profile-select').selectOption('brainbip-v1');
   const toggle = page.getByRole('switch', { name: 'This email is private' });
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await page.locator('#passphrase').fill('correct horse battery staple');
@@ -314,4 +319,58 @@ test('Monero recovery is hidden by default and cleared after closing, switching,
   await expect(page.locator('#monero-recovery-panel')).toBeHidden();
   await page.locator('#reset-button').click();
   await expect(words).toHaveCount(0);
+});
+
+test('default V2 reports real stages and retains explicit V1 recovery', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.locator('#profile-select')).toHaveValue('brainbip-v2');
+  await page.evaluate(() => {
+    window.testStages = [];
+    const progress = document.getElementById('progress-state');
+    new MutationObserver(() => {
+      const stage = progress.dataset.stage;
+      if (stage && window.testStages.at(-1) !== stage) window.testStages.push(stage);
+    }).observe(progress, { attributes: true, attributeFilter: ['data-stage'] });
+  });
+  await page.locator('#passphrase').fill(v2Fixture.passphrase);
+  await page.locator('#email').fill(v2Fixture.email);
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#progress-state')).toHaveAttribute('data-stage', 'argon2id');
+  await expect(page.locator('#progress-state')).toContainText('512 MiB');
+  await expect(page.locator('#progress-elapsed')).not.toHaveText('00:00');
+  await page
+    .locator('#output-panel')
+    .screenshot({ path: testInfo.outputPath('desktop-memory-progress.png') });
+  await expect(page.locator('#progress-state')).toHaveAttribute('data-stage', 'pbkdf2', {
+    timeout: 45_000,
+  });
+  await expect(page.locator('[data-stage="argon2id"] .stage-status')).toHaveText('Complete');
+  await page
+    .locator('#output-panel')
+    .screenshot({ path: testInfo.outputPath('desktop-cpu-progress.png') });
+  await expect(page.locator('#result-state')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('#profile-tag')).toHaveText('V2');
+  await expect(page.locator('#result-profile')).toHaveText('brainbip-v2');
+  await testInfo.attach('v2-browser-timing', {
+    body: await page.locator('#result-timing').textContent(),
+    contentType: 'text/plain',
+  });
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(
+    v2Fixture.mnemonic.split(' '),
+  );
+  const stages = await page.evaluate(() => window.testStages);
+  expect(stages.filter((stage) => ['argon2id', 'pbkdf2', 'addresses'].includes(stage))).toEqual([
+    'argon2id',
+    'pbkdf2',
+    'addresses',
+  ]);
+  await page.locator('#profile-select').selectOption('brainbip-v1');
+  await expect(page.locator('#result-state')).toBeHidden();
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#profile-select')).toHaveValue('brainbip-v2');
 });

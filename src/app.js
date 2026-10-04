@@ -4,21 +4,24 @@ import { createWorkerOwner } from './worker-task.js';
 import { createClipboardController } from './ui/clipboard.js';
 import { createRecoveryView } from './ui/recovery.js';
 import { createStrengthController } from './ui/strength.js';
+import { createProgressController } from './ui/progress.js';
+import { DEFAULT_PROFILE_ID, getProfile } from './profiles.js';
 
 const $ = (id) => document.getElementById(id);
 const form = $('wallet-form');
 const passphraseInput = $('passphrase');
 const emailInput = $('email');
 const privateEmailInput = $('private-email');
+const profileInput = $('profile-select');
 const generateButton = $('generate-button');
-const stageOrder = ['argon2id', 'pbkdf2', 'addresses'];
 let jobCounter = 0;
-let startedAt = 0;
 let uiRevision = 0;
+let scrollFrame = 0;
 
 const wallet = createWorkerOwner(walletWorkerSource);
 const clipboard = createClipboardController($('copy-status'), () => uiRevision);
 const recovery = createRecoveryView({ getElement: $, copyText: clipboard.copyText });
+const progress = createProgressController({ getElement: $ });
 const strength = createStrengthController({
   getElement: $,
   getInputs: () => ({
@@ -53,6 +56,9 @@ function clearError() {
 function showError(message) {
   $('input-error').textContent = message;
   $('input-error').hidden = false;
+  if (window.matchMedia('(max-width: 880px)').matches) {
+    $('input-error').scrollIntoView({ behavior: 'instant', block: 'center' });
+  }
 }
 
 function setBusy(busy) {
@@ -69,6 +75,9 @@ function clearResults() {
 
 function cancelDerivation(message = '') {
   wallet.stop();
+  progress.stop();
+  cancelAnimationFrame(scrollFrame);
+  scrollFrame = 0;
   $('progress-state').hidden = true;
   $('empty-state').hidden = false;
   setBusy(false);
@@ -76,23 +85,30 @@ function cancelDerivation(message = '') {
 }
 
 function setStage(stage) {
-  const currentIndex = stageOrder.indexOf(stage);
-  for (const item of $('stage-list').children) {
-    const index = stageOrder.indexOf(item.dataset.stage);
-    const state =
-      index < currentIndex ? 'complete' : index === currentIndex ? 'current' : 'upcoming';
-    item.dataset.state = state;
-    item.querySelector('.stage-status').textContent =
-      state === 'complete' ? 'Complete' : state === 'current' ? 'Running' : 'Waiting';
-    item.querySelector('.stage-marker').textContent =
-      state === 'complete' ? '✓' : String(index + 1);
-  }
+  progress.setStage(stage);
   const announcements = {
     argon2id: 'Running memory-hard derivation.',
     pbkdf2: 'Running the second derivation.',
     addresses: 'Generating recovery words and receiving addresses.',
   };
   if (announcements[stage]) announce(announcements[stage]);
+}
+
+function revealProgressOnMobile() {
+  if (!window.matchMedia('(max-width: 880px)').matches) return;
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = 0;
+    if (!wallet.isRunning()) return;
+    const panel = $('output-panel');
+    panel.focus({ preventScroll: true });
+    panel.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'instant'
+        : 'smooth',
+      block: 'start',
+    });
+  });
 }
 
 function startDerivation(event) {
@@ -108,19 +124,21 @@ function startDerivation(event) {
   $('empty-state').hidden = true;
   $('progress-state').hidden = false;
   setBusy(true);
-  startedAt = performance.now();
-  setStage(null);
   announce('Starting local computation.');
   try {
+    const profile = getProfile(profileInput.value);
+    progress.start(profile);
     wallet.start(
       ++jobCounter,
-      { passphrase: passphraseInput.value, email: emailInput.value },
+      { passphrase: passphraseInput.value, email: emailInput.value, profileId: profile.id },
       {
         onMessage(data) {
           if (data.type === 'stage') setStage(data.stage);
           if (data.type === 'result') {
             wallet.stop();
-            recovery.show(data.result, ((performance.now() - startedAt) / 1000).toFixed(1));
+            progress.setStage('complete');
+            progress.stop();
+            recovery.show(data.result, progress.elapsedSeconds().toFixed(1));
             setBusy(false);
             announce(
               'Recovery phrase ready. Twelve words and twenty receiving addresses per chain have been generated. The recovery phrase is hidden.',
@@ -142,6 +160,7 @@ function startDerivation(event) {
         },
       },
     );
+    revealProgressOnMobile();
   } catch {
     cancelDerivation();
     showError(
@@ -166,6 +185,7 @@ function resetAll({ focus = true, announceReset = true } = {}) {
   strength.clear();
   clipboard.clear();
   form.reset();
+  profileInput.value = DEFAULT_PROFILE_ID;
   setPrivateEmail(false);
   passphraseInput.value = '';
   emailInput.value = '';
@@ -185,6 +205,7 @@ function resetAll({ focus = true, announceReset = true } = {}) {
 form.addEventListener('submit', startDerivation);
 passphraseInput.addEventListener('input', handleInputEdit);
 emailInput.addEventListener('input', handleInputEdit);
+profileInput.addEventListener('change', handleInputEdit);
 privateEmailInput.addEventListener('click', () => {
   setPrivateEmail(!privateEmailEnabled());
   strength.schedule();
@@ -196,11 +217,13 @@ $('toggle-password').addEventListener('click', () => {
   $('toggle-password').setAttribute('aria-label', visible ? 'Hide passphrase' : 'Show passphrase');
   $('toggle-password').setAttribute('aria-pressed', String(visible));
 });
-$('cancel-button').addEventListener('click', () => {
+function handleCancel() {
   cancelDerivation('Computation cancelled.');
   clearResults();
   strength.cancel();
-});
+}
+$('cancel-button').addEventListener('click', handleCancel);
+$('progress-cancel-button').addEventListener('click', handleCancel);
 $('reset-button').addEventListener('click', resetAll);
 window.addEventListener('pagehide', () => resetAll({ focus: false, announceReset: false }));
 document.querySelectorAll('a[href^="#docs-"]').forEach((link) => {

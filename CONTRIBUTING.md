@@ -27,7 +27,7 @@ Local desktop tests use an installed Google Chrome; mobile tests use Playwright 
 
 Use `npm run format:check` to check formatting without editing files and `npm run check:repo` to check version, lockfile, and changelog consistency. `npm test` runs unit tests, `npm run build` regenerates the offline edition, and `npm run test:build` checks an existing build. Review desktop and narrow layouts, cancellation, input edits, reset, secret reveal/copy, and offline execution when changing the interface.
 
-The original full-cost fixture in `tests/fixtures/brainbip-v1.json` preserves the v1 mnemonic and eighty BTC/ETH/SOL/ZEC addresses. Monero vectors live separately in `tests/fixtures/monero-ledger-v1.json`. Fixtures are deliberately public and must never receive funds. Ordinary tests must not rewrite their expected values.
+The original full-cost fixture in `tests/fixtures/brainbip-v1.json` preserves the v1 mnemonic and eighty BTC/ETH/SOL/ZEC addresses. `tests/fixtures/brainbip-v2.json` records the separate v2 mapping using the same public input case and independent reference implementations. Monero vectors live separately in `tests/fixtures/monero-ledger-v1.json`. Fixtures are deliberately public and must never receive funds. Ordinary tests must not rewrite their expected values.
 
 An optional independent Monero C++ WebAssembly check uses a temporary, test-only installation:
 
@@ -41,9 +41,10 @@ The reference script pins the native binary hashes, disables HTTP transport, and
 
 ## Changes and compatibility
 
-- Preserve `brainbip-v1` and `ledger-bip39-v1`. Changing an existing input mapping, normalization, KDF parameter, path, or address encoding requires a new recovery identifier and explicit compatibility documentation.
+- Preserve `brainbip-v1`, `brainbip-v2`, and `ledger-bip39-v1`. Changing an existing input mapping, normalization, KDF parameter, path, or address encoding requires a new recovery identifier and explicit compatibility documentation. Keep v1 recovery available when changing the default for new generation.
 - Keep runtime resources embedded. Do not add a CDN, analytics, RPC, browser storage for inputs, or logging of secret values.
 - Keep estimates distinct from measured entropy. The private-email switch is opt-in and affects estimates only.
+- Show actual derivation stages and elapsed time. The bundled Argon2 API has no intermediate progress callback; do not present elapsed time as a measured completion percentage. Runtime benchmarks must never alter a recovery profile's KDF parameters or silently choose another profile.
 - Use public fixtures in tests and reports. Include the relevant checks and behavior in pull requests; never include real passphrases, recovery words, keys, or personal screenshots.
 - Retain upstream licenses and attribution when adding code, data, or fonts. The offline edition must include notices for everything it bundles.
 

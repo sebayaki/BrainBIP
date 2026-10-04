@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
 const fixture = JSON.parse(
-  await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'),
+  await readFile(new URL('../fixtures/brainbip-v2.json', import.meta.url), 'utf8'),
 );
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 
@@ -16,7 +16,7 @@ test('mobile WebKit keeps controls readable, zoom available, and the layout insi
   );
   for (const width of [320, 390, 430, 768]) {
     await page.setViewportSize({ width, height: 844 });
-    for (const id of ['passphrase', 'email']) {
+    for (const id of ['passphrase', 'email', 'profile-select']) {
       const input = page.locator(`#${id}`);
       expect(
         await input.evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
@@ -63,10 +63,36 @@ test('mobile WebKit derives offline including Monero and renders long addresses 
   // Block every HTTP(S) request instead, while allowing file/blob/data assets.
   await context.route(/^https?:\/\//, (route) => route.abort('internetdisconnected'));
   await page.goto(offlineURL);
+  await expect(page.locator('#profile-select')).toHaveValue('brainbip-v2');
   await page.locator('#passphrase').fill(fixture.passphrase);
   await page.locator('#email').fill(fixture.email);
   await page.locator('#generate-button').click();
+  await expect(page.locator('#progress-state')).toHaveAttribute('data-stage', 'argon2id');
+  await expect(page.locator('#output-panel')).toBeFocused();
+  await expect
+    .poll(async () => {
+      const box = await page.locator('#output-panel').boundingBox();
+      return box.y >= 0 && box.y <= 80;
+    })
+    .toBe(true);
+  await expect(page.locator('#progress-cancel-button')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // The WebKit screenshot tool injects a style blocked by the app's CSP.
+  page.off('console', collectConsoleError);
+  try {
+    await page.screenshot({
+      path: testInfo.outputPath('webkit-memory-progress.png'),
+      caret: 'initial',
+    });
+  } finally {
+    page.on('console', collectConsoleError);
+  }
   await expect(page.locator('#result-state')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('#profile-tag')).toHaveText('V2');
+  await testInfo.attach('v2-browser-timing', {
+    body: await page.locator('#result-timing').textContent(),
+    contentType: 'text/plain',
+  });
   await page.locator('#toggle-phrase').click();
   await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
   await page.locator('#tab-xmr').click();
@@ -107,4 +133,40 @@ test('mobile WebKit derives offline including Monero and renders long addresses 
   await expect(page.locator('#monero-mnemonic-grid li')).toHaveCount(0);
   expect(requests).toEqual([]);
   expect(errors).toEqual([]);
+});
+
+test('mobile reduced-motion progress remains cancellable and profile changes invalidate work', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto('/');
+  await page.locator('#passphrase').fill('PUBLIC MOBILE CANCELLATION TEST ONLY');
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#output-panel')).toBeFocused();
+  await expect(page.locator('#progress-state')).toBeVisible();
+  await expect(page.locator('#progress-cancel-button')).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const animations = await page
+    .locator('#progress-state')
+    .evaluate(
+      (element) =>
+        element
+          .getAnimations({ subtree: true })
+          .filter((animation) => animation.playState === 'running').length,
+    );
+  expect(animations).toBe(0);
+  await page.locator('#progress-cancel-button').click();
+  await expect(page.locator('#progress-state')).toBeHidden();
+  await expect(page.locator('#generate-button')).toBeEnabled();
+  const elapsed = await page.locator('#progress-elapsed').textContent();
+  await page.waitForTimeout(350);
+  await expect(page.locator('#progress-elapsed')).toHaveText(elapsed);
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#progress-state')).toBeVisible();
+  await page.locator('#profile-select').selectOption('brainbip-v1');
+  await expect(page.locator('#progress-state')).toBeHidden();
+  await expect(page.locator('#result-state')).toBeHidden();
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#profile-select')).toHaveValue('brainbip-v2');
 });

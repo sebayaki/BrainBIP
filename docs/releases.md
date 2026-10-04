@@ -6,7 +6,7 @@ Application versions follow `MAJOR.MINOR.PATCH`, optionally followed by a prerel
 
 ## Recovery versions stay fixed
 
-`brainbip-v1` defines the input normalization, KDF, twelve-word output, and original four-chain paths. `ledger-bip39-v1` defines the Monero mapping. These identifiers do not track the application version.
+`brainbip-v1` and `brainbip-v2` define separate fixed input-to-mnemonic profiles with shared normalization and chain mappings. V2 is the default for new generation; v1 remains available for recovery. The same inputs produce different wallets under the two profiles. `ledger-bip39-v1` defines the shared Monero mapping from a BIP39 seed. These identifiers do not track the application version.
 
 An interface cleanup or dependency update must reproduce the existing vectors. Changes that affect recovered wallets require a new recovery profile, explicit documentation, and continued access to the old profile. Never silently retune a published profile.
 
