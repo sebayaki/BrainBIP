@@ -6,6 +6,25 @@ Application versions describe the interface, packaging, and supported features. 
 
 No changes yet.
 
+## [0.4.1] - 2026-10-04
+
+### Added
+
+- Open Graph and Twitter Card metadata with a 1200×630 share image, descriptive alternative text, and the canonical hosted URL.
+- A single-URL XML sitemap and explicit indexing metadata for the hosted page.
+- The share image and sitemap in verified Pages and Release artifacts, including their checksums.
+
+### Changed
+
+- More compact desktop and mobile layouts, with the selected address path in the header instead of repeated path and position labels on every row.
+- Kept the hosted and offline HTML byte-identical and self-contained. Share metadata introduces no runtime resource requests; wallet derivation and outputs are unchanged.
+
+### Fixed
+
+- Aligned loading labels with their graphics at every screen size.
+- Placed the path label and selector on one line, with consistent typography and no redundant network or row-count labels.
+- Removed the narrow desktop documentation caption width that left its final word on a separate line.
+
 ## [0.4.0] - 2026-10-04
 
 ### Added
@@ -66,7 +85,8 @@ The first tagged release includes a self-contained offline app for twelve-word r
 - Monero support, keeping all four supported networks on one consistent twelve-word BIP39 recovery phrase.
 - Derivation version selection and backward compatibility, leaving one fixed strengthened algorithm.
 
-[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/sebayaki/BrainBIP/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/sebayaki/BrainBIP/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sebayaki/BrainBIP/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sebayaki/BrainBIP/releases/tag/v0.2.0

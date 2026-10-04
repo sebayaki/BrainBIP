@@ -6,12 +6,6 @@ import {
   resolveDerivation,
 } from '../derivation-paths.js';
 
-const chainDetails = {
-  btc: 'Bitcoin · Receiving addresses',
-  eth: 'Ethereum · Receiving accounts',
-  sol: 'Solana · Ed25519 receiving accounts',
-  zec: 'Zcash · Transparent P2PKH addresses · no shielded privacy',
-};
 const validationMessages = new Set(Object.values(DERIVATION_ERROR_MESSAGES));
 const addressFailure = 'Address derivation could not finish. Try applying the path again.';
 
@@ -21,7 +15,7 @@ function safeAddressError(error) {
 
 function defaultChoices(result) {
   return Object.fromEntries(
-    Object.keys(chainDetails).map((chain) => {
+    Object.keys(PROFILE.paths).map((chain) => {
       const standard = resolveDerivation(chain);
       return [
         chain,
@@ -76,16 +70,11 @@ function renderAddresses(list, chain, rows) {
   list.replaceChildren();
   rows.forEach((entry, position) => {
     const row = document.createElement('tr');
-    const number = document.createElement('td');
-    number.textContent = String(position + 1).padStart(2, '0');
     const data = document.createElement('td');
     const address = document.createElement('span');
     address.className = 'address-text';
     address.textContent = entry.address;
-    const path = document.createElement('span');
-    path.className = 'address-path';
-    path.textContent = entry.path;
-    data.append(address, path);
+    data.append(address);
     const action = document.createElement('td');
     const button = document.createElement('button');
     button.type = 'button';
@@ -98,7 +87,7 @@ function renderAddresses(list, chain, rows) {
     button.dataset.position = String(position);
     button.append(makeCopyIcon());
     action.append(button);
-    row.append(number, data, action);
+    row.append(data, action);
     list.append(row);
   });
 }
@@ -240,6 +229,7 @@ export function createRecoveryView({
     group.append(custom);
     select.append(group);
     select.value = choice.presetId;
+    $('derivation-value').textContent = select.selectedOptions[0].textContent;
     $('custom-derivation').hidden = choice.presetId !== 'custom';
     $('custom-path').value = choice.customPath;
     $('address-type').value = choice.addressType;
@@ -321,7 +311,6 @@ export function createRecoveryView({
     if (sameChain) return;
     renderedChain = chain;
     $('address-panel').setAttribute('aria-labelledby', `tab-${chain}`);
-    $('chain-description').textContent = chainDetails[chain];
     renderControls();
     loadAddresses();
   }
@@ -336,10 +325,10 @@ export function createRecoveryView({
     phraseVisible = false;
     $('mnemonic-grid').replaceChildren();
     $('address-list').replaceChildren();
-    $('chain-description').textContent = '';
     $('result-state').hidden = true;
     $('result-timing').textContent = 'Derived locally';
     $('derivation-select').replaceChildren();
+    $('derivation-value').textContent = '';
     $('custom-derivation').hidden = true;
     $('custom-path').value = '';
     $('address-type').value = 'native';
@@ -402,6 +391,7 @@ export function createRecoveryView({
     choice.dirty = true;
     choice.rows = null;
     $('derivation-select').querySelector('option[value="custom"]').textContent = 'Custom path…';
+    $('derivation-value').textContent = 'Custom path…';
     setAddressStatus('Apply the path to generate addresses.');
   }
   $('custom-path').addEventListener('input', editCustomPath);

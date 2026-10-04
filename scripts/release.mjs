@@ -13,6 +13,6 @@ if (command === 'check') {
   console.log(`Release metadata verified: ${tag} (${date}).`);
 } else {
   console.log(
-    `# BrainBIP ${tag}\n\n${body}\n\n## Downloads\n\nDownload \`brainbip.html\` for the complete offline app. \`index.html\` contains the same bytes. \`VERSION.json\` identifies the application version; \`SHA256SUMS.txt\` covers the HTML, version metadata, license, and third-party notices.\n\nThis release uses the fixed \`brainbip-v2\` stretching algorithm, separate from the application version. Select 12 or 24 recovery words; each length produces a different wallet. Recovery also requires the matching address path and type.\n\nExperimental, unaudited software. Never fund public test-vector addresses.\n`,
+    `# BrainBIP ${tag}\n\n${body}\n\n## Downloads\n\nDownload \`brainbip.html\` for the complete offline app. \`index.html\` contains the same bytes. \`VERSION.json\` identifies the application version; \`SHA256SUMS.txt\` covers the HTML, version metadata, license, third-party notices, social preview image, and sitemap.\n\nThis release uses the fixed \`brainbip-v2\` stretching algorithm, separate from the application version. Select 12 or 24 recovery words; each length produces a different wallet. Recovery also requires the matching address path and type.\n\nExperimental, unaudited software. Never fund public test-vector addresses.\n`,
   );
 }

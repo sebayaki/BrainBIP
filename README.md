@@ -18,7 +18,7 @@
 
 BrainBIP turns a **passphrase + optional email salt** into **12 or 24 BIP39 recovery words** and twenty receiving addresses each for Bitcoin, Ethereum, Solana, and Zcash.
 
-The interface, cryptographic code, dictionaries, fonts, and WebAssembly fit in **one HTML file**. Everything runs on your device, including strength estimates. No server, CDN, RPC, analytics, or runtime downloads are required.
+The interface, cryptographic code, dictionaries, fonts, and WebAssembly fit in **one HTML file**. Everything runs on your device, including strength estimates. No server, CDN, RPC, analytics, or runtime downloads are required. The hosted page also includes link-preview metadata and a share image; the offline app needs neither an image download nor a connection.
 
 > **Experimental and unaudited.** Argon2id and PBKDF2 make guessing more expensive; they cannot give a predictable passphrase the security of randomly generated recovery words. Read the [security model](docs/security.md) before using the tool.
 
@@ -39,7 +39,7 @@ The app requires a modern browser with WebAssembly and Web Workers, plus **512 M
 - **12 or 24 words:** choose before or after generation. Each length produces a different wallet.
 - **One fixed computation:** Argon2id and PBKDF2 run once with the same parameters on every device; both word counts are prepared from the result.
 - **Address path choices:** Bitcoin address types, Ethereum Ledger layouts, Solana paths, and custom templates.
-- **Eighty default addresses per phrase:** twenty per chain, with each complete path always visible. Changing a path derives addresses locally without repeating the heavy computation.
+- **Eighty default addresses per phrase:** twenty per chain, with the selected path template in the address header. Changing a path derives addresses locally without repeating the heavy computation.
 - **Four network tabs:** Bitcoin, Ethereum, Solana, and Zcash, with full names and embedded SVG icons.
 - **Explicit secret controls:** reveal, hide, copy, cancel, and reset.
 - **Local guesswork estimates:** dictionary-aware feedback; the private-email switch starts **OFF** and changes the estimate only.

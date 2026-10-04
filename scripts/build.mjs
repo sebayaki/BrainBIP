@@ -98,6 +98,11 @@ const files = new Map([
   ['VERSION.json', JSON.stringify({ name: 'BrainBIP', version: project.version }, null, 2) + '\n'],
   ['THIRD_PARTY_NOTICES.txt', notices],
   ['LICENSE', await readFile(path.join(root, 'LICENSE'), 'utf8')],
+  ['social-card.png', await readFile(path.join(root, 'assets/social-card.png'))],
+  [
+    'sitemap.xml',
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${escapeHTML(project.homepage)}</loc></url></urlset>\n`,
+  ],
 ]);
 const checksums = [...files]
   .map(([name, content]) => `${hash(content, 'hex')}  ${name}\n`)

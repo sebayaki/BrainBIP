@@ -775,10 +775,15 @@ input::placeholder {
   border-radius: 8px;
   background: #f5f8f0;
 }
+.schematic-layout {
+  width: 100%;
+  max-width: 484px;
+  margin-inline: auto;
+}
 .derivation-schematic {
   display: block;
   width: 100%;
-  max-height: 176px;
+  height: auto;
   overflow: visible;
 }
 .schematic-wire,
@@ -822,8 +827,8 @@ input::placeholder {
   fill: var(--green);
 }
 .schematic-labels {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  position: relative;
+  height: 16px;
   margin-top: 4px;
   color: var(--muted);
   font-family: var(--mono);
@@ -831,6 +836,21 @@ input::placeholder {
   letter-spacing: 0.5px;
   text-align: center;
   text-transform: uppercase;
+}
+.schematic-labels > span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+/* Match the graphic centers at x=83, 220, and 374 in the 440-wide viewBox. */
+.schematic-labels > :first-child {
+  left: 18.863636%;
+}
+.schematic-labels > :nth-child(2) {
+  left: 50%;
+}
+.schematic-labels > :last-child {
+  left: 85%;
 }
 .progress-state[data-stage='argon2id'] .memory-outline,
 .progress-state[data-stage='pbkdf2'] .memory-outline,
@@ -1086,10 +1106,6 @@ input::placeholder {
   justify-content: space-between;
   gap: 16px;
 }
-.address-heading > span {
-  font-size: 12px;
-  color: var(--muted);
-}
 .chain-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1137,27 +1153,71 @@ input::placeholder {
   background: var(--ink);
   color: #eff5e7;
 }
-.chain-description {
-  margin: 0;
-  min-height: 18px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
 .address-controls {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 .derivation-field {
-  width: 216px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   max-width: 100%;
-  flex-shrink: 0;
 }
-.derivation-field label,
+.derivation-field label {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.derivation-select-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 216px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 30px 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #fdfef8;
+  color: var(--ink);
+}
+.derivation-select-control::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 17px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+#derivation-value {
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Keep the native picker and 16px Safari focus sizing; match the visible path to the address typography. */
+#derivation-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  opacity: 0;
+  cursor: pointer;
+}
+.derivation-select-control:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 .custom-derivation > label,
 .address-type-field label {
   display: block;
@@ -1166,7 +1226,6 @@ input::placeholder {
   font-size: 12px;
   line-height: 1.5;
 }
-.derivation-field select,
 .address-type-field select {
   display: block;
   width: 100%;
@@ -1237,7 +1296,7 @@ input::placeholder {
 }
 .address-table th {
   text-align: left;
-  padding: 12px 8px;
+  padding: 10px 0;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 9px;
@@ -1246,26 +1305,16 @@ input::placeholder {
   letter-spacing: 0.5px;
   border-bottom: 1px solid #dde6d2;
 }
-.address-table th:first-child {
-  width: 32px;
-  padding-left: 0;
-}
 .address-table th:last-child {
-  width: 56px;
+  width: 44px;
 }
 .address-table td {
-  padding: 8px;
+  padding: 2px 0;
   border-bottom: 1px solid #e2e9d8;
   vertical-align: middle;
 }
 .address-table td:first-child {
-  padding-left: 0;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 10px;
-}
-.address-table td:last-child {
-  padding-right: 0;
+  padding-right: 12px;
 }
 .address-text {
   display: block;
@@ -1279,24 +1328,15 @@ input::placeholder {
   word-break: break-all;
   user-select: all;
 }
-.address-path {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 10px;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
 .copy-address {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  border: 1px solid #d9e5cc;
+  border: 0;
   border-radius: 5px;
-  background: #f5faed;
+  background: transparent;
   color: var(--muted);
 }
 .copy-address:hover {
@@ -1330,6 +1370,7 @@ input::placeholder {
 }
 .docs-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   justify-content: space-between;
   gap: 24px;
@@ -1343,7 +1384,9 @@ input::placeholder {
   letter-spacing: -0.6px;
 }
 .docs-heading > p {
-  max-width: 220px;
+  flex: 0 0 auto;
+  max-width: 100%;
+  text-wrap: balance;
   margin: 0;
   color: var(--muted);
   font-size: 13px;
@@ -1908,9 +1951,6 @@ input::placeholder {
   .address-heading h3 {
     font-size: 14px;
   }
-  .address-heading > span {
-    font-size: 11px;
-  }
   .chain-tabs {
     display: flex;
     width: 100%;
@@ -1937,17 +1977,18 @@ input::placeholder {
     border-radius: 2px;
     background: #c5d5b8;
   }
-  .chain-description {
-    font-size: 11px;
-  }
-  .address-controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-bottom: 12px;
-  }
   .derivation-field {
     width: 100%;
+    gap: 8px;
+  }
+  .derivation-select-control {
+    flex: 1;
+    width: auto;
+    padding-left: 8px;
+    padding-right: 24px;
+  }
+  .derivation-select-control::after {
+    right: 9px;
   }
   .custom-derivation {
     padding: 12px;
@@ -1966,26 +2007,10 @@ input::placeholder {
   }
   .address-table th {
     font-size: 8px;
-    padding: 12px 6px;
-  }
-  .address-table th:first-child {
-    width: 24px;
-  }
-  .address-table th:last-child {
-    width: 52px;
-  }
-  .address-table td {
-    padding: 8px 6px;
-  }
-  .address-table td:first-child {
-    font-size: 9px;
   }
   .address-text {
     font-size: 12px;
     line-height: 1.7;
-  }
-  .address-path {
-    font-size: 9px;
   }
   .result-footer {
     font-size: 9px;

@@ -65,7 +65,7 @@ jobs:
             echo 'The tag changed after verification; refusing to publish.' >&2
             exit 1
           fi
-          assets=(dist/brainbip.html dist/index.html dist/VERSION.json dist/SHA256SUMS.txt dist/LICENSE dist/THIRD_PARTY_NOTICES.txt)
+          assets=(dist/brainbip.html dist/index.html dist/VERSION.json dist/SHA256SUMS.txt dist/LICENSE dist/THIRD_PARTY_NOTICES.txt dist/social-card.png dist/sitemap.xml)
           if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null); then
             if [ "$draft" != 'true' ]; then
               echo 'This release is already published. Published assets are never overwritten.' >&2

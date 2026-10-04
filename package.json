@@ -1,6 +1,6 @@
 {
   "name": "brainbip",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "An offline-first experiment in deterministic wallet recovery.",
   "type": "module",

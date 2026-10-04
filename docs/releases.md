@@ -43,10 +43,14 @@ Each GitHub Release includes:
 - `brainbip.html` — the complete offline application.
 - `index.html` — the byte-identical hosted edition.
 - `VERSION.json` — application name and version.
-- `SHA256SUMS.txt` — checksums for both HTML files, version metadata, and notices.
+- `SHA256SUMS.txt` — checksums for both HTML files, version metadata, licenses, the share image, and the sitemap.
 - `LICENSE` and `THIRD_PARTY_NOTICES.txt` — the project and bundled dependency licenses.
+- `social-card.png` — the 1200×630 image used by hosted-page link previews.
+- `sitemap.xml` — the hosted page's canonical URL for search crawlers.
 
-After downloading all six assets into one directory, verify them with `sha256sum --check SHA256SUMS.txt` on Linux or `shasum -a 256 --check SHA256SUMS.txt` on macOS. A checksum verifies bytes against a manifest; it is not an independent authenticity guarantee. Check the repository, version tag, and source as well.
+After downloading all eight assets into one directory, verify them with `sha256sum --check SHA256SUMS.txt` on Linux or `shasum -a 256 --check SHA256SUMS.txt` on macOS. A checksum verifies bytes against a manifest; it is not an independent authenticity guarantee. Check the repository, version tag, and source as well.
+
+Only `brainbip.html` is needed to run the offline app. The PNG and sitemap accompany the hosted page; their URLs in page metadata do not load remote resources during app execution. Both HTML files identify `https://sebayaki.github.io/BrainBIP/` as canonical. Search indexing and social preview rendering depend on the receiving crawler and its cache.
 
 The release is assembled as a draft so partially uploaded assets are not published. Once all uploads succeed, the workflow publishes it. Tags with a prerelease suffix are marked as prereleases and do not replace the latest regular release. Published release assets are never overwritten by this workflow.
 

@@ -86,7 +86,7 @@ The UI defaults to 12 words and allows choosing either length before or after ge
 
 ## 4. Derive mainnet addresses
 
-For each phrase, the application derives indexes **0 through 19**, displayed as positions 1 through 20. Each output contains its zero-based `index`, complete `path`, and public `address`. Apostrophes indicate hardened derivation. Both word counts use these default path templates, with different seeds and resulting addresses:
+For each phrase, the application derives indexes **0 through 19** in ascending order. Each output contains its zero-based `index`, complete `path`, and public `address`. The interface shows the selected path template in the address header; its rows show addresses in that same order. Apostrophes indicate hardened derivation. Both word counts use these default path templates, with different seeds and resulting addresses:
 
 | Network         | Curve and key derivation | Default path for index `i` | Address                                      |
 | --------------- | ------------------------ | -------------------------- | -------------------------------------------- |

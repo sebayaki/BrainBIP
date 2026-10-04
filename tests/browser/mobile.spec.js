@@ -127,7 +127,7 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
     await expect(page.locator('.address-text')).toHaveText(
       fixture.addresses[chain].map((entry) => entry.address),
     );
-    await expect(page.locator('.address-path').first()).toBeVisible();
+    await expect(page.locator('.address-path')).toHaveCount(0);
   }
   await expect(page.locator('#address-list details')).toHaveCount(0);
   expect(
@@ -152,7 +152,7 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
       )
       .toBe(true);
     const clipped = await page
-      .locator('.word-value, .address-text, .address-path')
+      .locator('.word-value, .address-text')
       .evaluateAll((elements) =>
         elements.some((element) => element.scrollWidth > element.clientWidth + 1),
       );

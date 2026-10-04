@@ -38,8 +38,7 @@ async function assertAllAddresses(page, expected = fixture) {
     await page.locator(`#tab-${chain}`).click();
     await expect(page.locator('#address-list tr')).toHaveCount(20);
     await expect(page.locator('.address-text')).toHaveText(rows.map((entry) => entry.address));
-    await expect(page.locator('.address-path')).toHaveText(rows.map((entry) => entry.path));
-    await expect(page.locator('.address-path').first()).toBeVisible();
+    await expect(page.locator('.address-path')).toHaveCount(0);
     await expect(page.locator('#address-list details')).toHaveCount(0);
   }
 }
@@ -413,9 +412,11 @@ test('path presets and custom paths update addresses without deriving new recove
     await expect(page.locator('#address-list tr')).toHaveCount(20);
     for (const row of vector.rows) {
       await expect(page.locator('.address-text').nth(row.index)).toHaveText(row.address);
-      await expect(page.locator('.address-path').nth(row.index)).toHaveText(row.path);
     }
-    await expect(page.locator('.address-path').first()).toBeVisible();
+    await expect(page.locator('.address-path')).toHaveCount(0);
+    await expect(page.locator('#derivation-value')).toHaveText(
+      await page.locator('#derivation-select option:checked').textContent(),
+    );
     await expect(page.locator('#address-list details')).toHaveCount(0);
     await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(
       fixture.mnemonic.split(' '),
@@ -435,7 +436,11 @@ test('path presets and custom paths update addresses without deriving new recove
   await page.locator('#tab-btc').click();
   await page.locator('#tab-eth').click();
   await expect(page.locator('#derivation-select')).toHaveValue('ledger-live');
-  await expect(page.locator('.address-path').nth(1)).toHaveText("m/44'/60'/1'/0/0");
+  await expect(page.locator('.address-text').nth(1)).toHaveText(
+    pathFixture.vectors.find(
+      (vector) => vector.chain === 'eth' && vector.selection.presetId === 'ledger-live',
+    ).rows[1].address,
+  );
   expect(await page.evaluate(() => window.testWalletJobs)).toBe(1);
   await page
     .locator('#address-panel')
@@ -539,7 +544,11 @@ test('word-count selection switches complete wallets without repeating the KDF',
   await page.locator('#tab-eth').click();
   await page.locator('#derivation-select').selectOption('ledger-live');
   await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'false');
-  await expect(page.locator('.address-path').nth(1)).toHaveText("m/44'/60'/1'/0/0");
+  await expect(page.locator('.address-text').nth(1)).toHaveText(
+    pathFixture.vectors.find(
+      (vector) => vector.chain === 'eth' && vector.selection.presetId === 'ledger-live',
+    ).rows[1].address,
+  );
   await page.locator('#word-count-24').click();
   await expect(page.locator('#derivation-select')).toHaveValue('standard');
   await expect(page.locator('#tab-eth')).toHaveAttribute('aria-selected', 'true');

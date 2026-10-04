@@ -6,13 +6,43 @@
     <meta name="theme-color" content="#f4f3ed" />
     <meta
       name="description"
-      content="A passphrase, twelve or twenty-four recovery words, and receiving addresses across four networks. BrainBIP is an offline-first experiment in deterministic wallet recovery."
+      content="Create 12 or 24 BIP39 recovery words from a passphrase, with Bitcoin, Ethereum, Solana and Zcash addresses. An offline, open-source experiment."
+    />
+    <link rel="canonical" href="https://sebayaki.github.io/BrainBIP/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BrainBIP" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://sebayaki.github.io/BrainBIP/" />
+    <meta property="og:title" content="BrainBIP — A wallet to remember." />
+    <meta
+      property="og:description"
+      content="Your passphrase. 12 or 24 recovery words. Four networks. An offline, open-source experiment."
+    />
+    <meta property="og:image" content="https://sebayaki.github.io/BrainBIP/social-card.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="BrainBIP: memory connected to recovery words and four networks."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BrainBIP — A wallet to remember." />
+    <meta
+      name="twitter:description"
+      content="Your passphrase. 12 or 24 recovery words. Four networks. An offline, open-source experiment."
+    />
+    <meta name="twitter:image" content="https://sebayaki.github.io/BrainBIP/social-card.png" />
+    <meta
+      name="twitter:image:alt"
+      content="BrainBIP: memory connected to recovery words and four networks."
     />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%23f4f3ed%22/%3E%3Cpath d=%22M9 8h5v16H9a5 5 0 0 1 0-10h14a5 5 0 0 1 0 10h-5V8h5%22 fill=%22none%22 stroke=%22%23242d28%22 stroke-width=%222%22/%3E%3Ccircle cx=%2223%22 cy=%228%22 r=%223%22 fill=%22%232f6b45%22/%3E%3C/svg%3E"
     />
-    <title>BrainBIP — A wallet to remember.</title>
+    <title>BrainBIP — Offline recovery phrase generator</title>
     <!-- APP_METADATA -->
     <!-- CSP -->
     <!-- APP_STYLES -->
@@ -318,70 +348,72 @@
                 </div>
               </div>
               <div class="derivation-visual" aria-hidden="true">
-                <svg class="derivation-schematic" viewBox="0 0 440 160" fill="none">
-                  <path class="schematic-wire" d="M138 80h40m84 0h40" />
-                  <g class="memory-zone">
-                    <path
-                      class="memory-outline"
-                      d="M83 19c-11-10-29-3-31 11-15-2-27 9-26 24-12 8-14 25-3 35-7 15 2 31 17 33 1 17 20 25 33 15l10-9m0-109c11-10 29-3 31 11 15-2 27 9 26 24 12 8 14 25 3 35 7 15-2 31-17 33-1 17-20 25-33 15l-10-9V19"
-                    />
-                    <g class="memory-cells">
-                      <rect x="44" y="47" width="12" height="12" rx="2" />
-                      <rect x="62" y="47" width="12" height="12" rx="2" />
-                      <rect x="92" y="47" width="12" height="12" rx="2" />
-                      <rect x="110" y="47" width="12" height="12" rx="2" />
-                      <rect x="35" y="65" width="12" height="12" rx="2" />
-                      <rect x="53" y="65" width="12" height="12" rx="2" />
-                      <rect x="92" y="65" width="12" height="12" rx="2" />
-                      <rect x="110" y="65" width="12" height="12" rx="2" />
-                      <rect x="35" y="83" width="12" height="12" rx="2" />
-                      <rect x="53" y="83" width="12" height="12" rx="2" />
-                      <rect x="101" y="83" width="12" height="12" rx="2" />
-                      <rect x="119" y="83" width="12" height="12" rx="2" />
-                      <rect x="44" y="101" width="12" height="12" rx="2" />
-                      <rect x="62" y="101" width="12" height="12" rx="2" />
-                      <rect x="92" y="101" width="12" height="12" rx="2" />
-                      <rect x="110" y="101" width="12" height="12" rx="2" />
+                <div class="schematic-layout">
+                  <svg class="derivation-schematic" viewBox="0 0 440 160" fill="none">
+                    <path class="schematic-wire" d="M138 80h40m84 0h40" />
+                    <g class="memory-zone">
+                      <path
+                        class="memory-outline"
+                        d="M83 19c-11-10-29-3-31 11-15-2-27 9-26 24-12 8-14 25-3 35-7 15 2 31 17 33 1 17 20 25 33 15l10-9m0-109c11-10 29-3 31 11 15-2 27 9 26 24 12 8 14 25 3 35 7 15-2 31-17 33-1 17-20 25-33 15l-10-9V19"
+                      />
+                      <g class="memory-cells">
+                        <rect x="44" y="47" width="12" height="12" rx="2" />
+                        <rect x="62" y="47" width="12" height="12" rx="2" />
+                        <rect x="92" y="47" width="12" height="12" rx="2" />
+                        <rect x="110" y="47" width="12" height="12" rx="2" />
+                        <rect x="35" y="65" width="12" height="12" rx="2" />
+                        <rect x="53" y="65" width="12" height="12" rx="2" />
+                        <rect x="92" y="65" width="12" height="12" rx="2" />
+                        <rect x="110" y="65" width="12" height="12" rx="2" />
+                        <rect x="35" y="83" width="12" height="12" rx="2" />
+                        <rect x="53" y="83" width="12" height="12" rx="2" />
+                        <rect x="101" y="83" width="12" height="12" rx="2" />
+                        <rect x="119" y="83" width="12" height="12" rx="2" />
+                        <rect x="44" y="101" width="12" height="12" rx="2" />
+                        <rect x="62" y="101" width="12" height="12" rx="2" />
+                        <rect x="92" y="101" width="12" height="12" rx="2" />
+                        <rect x="110" y="101" width="12" height="12" rx="2" />
+                      </g>
                     </g>
-                  </g>
-                  <g class="cpu-zone">
-                    <circle class="cpu-track" cx="220" cy="80" r="42" />
-                    <g class="cpu-orbit">
-                      <path d="M220 38a42 42 0 0 1 42 42" />
-                      <circle cx="220" cy="38" r="3" />
+                    <g class="cpu-zone">
+                      <circle class="cpu-track" cx="220" cy="80" r="42" />
+                      <g class="cpu-orbit">
+                        <path d="M220 38a42 42 0 0 1 42 42" />
+                        <circle cx="220" cy="38" r="3" />
+                      </g>
+                      <path
+                        class="cpu-pins"
+                        d="M209 52v8m11-8v8m11-8v8m-22 40v8m11-8v8m11-8v8m-39-39h8m-8 11h8m-8 11h8m40-22h8m-8 11h8m-8 11h8"
+                      />
+                      <rect class="cpu-shell" x="200" y="60" width="40" height="40" rx="6" />
+                      <path class="cpu-core" d="M211 73h18m-18 7h18m-18 7h10" />
                     </g>
-                    <path
-                      class="cpu-pins"
-                      d="M209 52v8m11-8v8m11-8v8m-22 40v8m11-8v8m11-8v8m-39-39h8m-8 11h8m-8 11h8m40-22h8m-8 11h8m-8 11h8"
-                    />
-                    <rect class="cpu-shell" x="200" y="60" width="40" height="40" rx="6" />
-                    <path class="cpu-core" d="M211 73h18m-18 7h18m-18 7h10" />
-                  </g>
-                  <g class="output-zone">
-                    <path
-                      class="output-branches"
-                      d="M302 80h18M320 47v66M320 47h20M320 69h20M320 91h20M320 113h20"
-                    />
-                    <g class="output-node">
-                      <rect x="340" y="38" width="68" height="18" rx="4" />
-                      <path d="M348 47h8m8 0h32" />
+                    <g class="output-zone">
+                      <path
+                        class="output-branches"
+                        d="M302 80h18M320 47v66M320 47h20M320 69h20M320 91h20M320 113h20"
+                      />
+                      <g class="output-node">
+                        <rect x="340" y="38" width="68" height="18" rx="4" />
+                        <path d="M348 47h8m8 0h32" />
+                      </g>
+                      <g class="output-node">
+                        <rect x="340" y="60" width="68" height="18" rx="4" />
+                        <path d="M348 69h8m8 0h32" />
+                      </g>
+                      <g class="output-node">
+                        <rect x="340" y="82" width="68" height="18" rx="4" />
+                        <path d="M348 91h8m8 0h32" />
+                      </g>
+                      <g class="output-node">
+                        <rect x="340" y="104" width="68" height="18" rx="4" />
+                        <path d="M348 113h8m8 0h32" />
+                      </g>
                     </g>
-                    <g class="output-node">
-                      <rect x="340" y="60" width="68" height="18" rx="4" />
-                      <path d="M348 69h8m8 0h32" />
-                    </g>
-                    <g class="output-node">
-                      <rect x="340" y="82" width="68" height="18" rx="4" />
-                      <path d="M348 91h8m8 0h32" />
-                    </g>
-                    <g class="output-node">
-                      <rect x="340" y="104" width="68" height="18" rx="4" />
-                      <path d="M348 113h8m8 0h32" />
-                    </g>
-                  </g>
-                </svg>
-                <div class="schematic-labels">
-                  <span>Memory</span><span>Compute</span><span>Recovery</span>
+                  </svg>
+                  <div class="schematic-labels">
+                    <span>Memory</span><span>Compute</span><span>Recovery</span>
+                  </div>
                 </div>
               </div>
               <div class="progress-toolbar">
@@ -449,7 +481,6 @@
               <div class="address-section">
                 <div class="address-heading">
                   <h3>Receiving addresses</h3>
-                  <span>First 20</span>
                 </div>
                 <div id="chain-tabs" class="chain-tabs" role="tablist" aria-label="Address network">
                   <button
@@ -557,10 +588,12 @@
                   tabindex="0"
                 >
                   <div class="address-controls">
-                    <p id="chain-description" class="chain-description"></p>
                     <div class="derivation-field">
                       <label for="derivation-select">Derivation path</label>
-                      <select id="derivation-select" aria-label="Derivation path"></select>
+                      <div class="derivation-select-control">
+                        <span id="derivation-value" aria-hidden="true"></span>
+                        <select id="derivation-select"></select>
+                      </div>
                     </div>
                   </div>
                   <div id="custom-derivation" class="custom-derivation" hidden>
@@ -602,7 +635,6 @@
                     <table class="address-table">
                       <thead>
                         <tr>
-                          <th scope="col">#</th>
                           <th scope="col">ADDRESS</th>
                           <th scope="col"><span class="sr-only">Copy address</span></th>
                         </tr>

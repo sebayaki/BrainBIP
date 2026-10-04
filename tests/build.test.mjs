@@ -11,8 +11,39 @@ const distributionFiles = [
   'VERSION.json',
   'THIRD_PARTY_NOTICES.txt',
   'LICENSE',
+  'social-card.png',
+  'sitemap.xml',
 ];
 const checksum = (data, encoding) => createHash('sha256').update(data).digest(encoding);
+
+test('social metadata points to the shipped card and canonical sitemap', async () => {
+  const meta = (key) => {
+    const tag = [...file.matchAll(/<meta\s[^>]*>/g)]
+      .map(([value]) => value)
+      .find((value) => value.includes(`="${key}"`));
+    return tag?.match(/content="([^"]*)"/)?.[1];
+  };
+  assert.ok(file.includes(`rel="canonical" href="${project.homepage}"`));
+  assert.equal(meta('og:url'), project.homepage);
+  assert.equal(meta('og:type'), 'website');
+  assert.equal(meta('twitter:card'), 'summary_large_image');
+  for (const key of ['og:image', 'twitter:image'])
+    assert.equal(meta(key), project.homepage + 'social-card.png');
+  assert.equal(meta('og:image:type'), 'image/png');
+  assert.equal(meta('og:image:width'), '1200');
+  assert.equal(meta('og:image:height'), '630');
+  assert.ok(meta('og:image:alt'));
+  assert.equal(meta('twitter:image:alt'), meta('og:image:alt'));
+  const card = await readFile(new URL('../dist/social-card.png', import.meta.url));
+  assert.equal(card.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  assert.equal(card.readUInt32BE(16), 1200);
+  assert.equal(card.readUInt32BE(20), 630);
+  const sitemap = await readFile(new URL('../dist/sitemap.xml', import.meta.url), 'utf8');
+  assert.deepEqual(
+    [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, url]) => url),
+    [project.homepage],
+  );
+});
 
 test('the offline edition is byte-identical to the hosted edition', async () => {
   assert.equal(await readFile(new URL('../dist/brainbip.html', import.meta.url), 'utf8'), file);
