@@ -7,12 +7,22 @@ const fixture = JSON.parse(
 const pathFixture = JSON.parse(
   await readFile(new URL('../fixtures/address-presets.json', import.meta.url), 'utf8'),
 );
+const fixture24 = JSON.parse(
+  await readFile(new URL('../fixtures/brainbip-24.json', import.meta.url), 'utf8'),
+);
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 
 test('mobile WebKit keeps controls readable, zoom available, and the layout inside the viewport', async ({
   page,
 }, testInfo) => {
   await page.goto('/');
+  await expect(page.locator('.chain-pills > span')).toHaveText([
+    'Bitcoin',
+    'Ethereum',
+    'Solana',
+    'Zcash',
+  ]);
+  await expect(page.locator('.chain-pills svg[aria-hidden="true"]')).toHaveCount(4);
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
     'content',
     'width=device-width, initial-scale=1',
@@ -27,7 +37,14 @@ test('mobile WebKit keeps controls readable, zoom available, and the layout insi
       await input.focus();
       expect(await page.evaluate(() => window.visualViewport.scale)).toBe(1);
     }
-    for (const id of ['private-email', 'toggle-password', 'generate-button', 'reset-button']) {
+    for (const id of [
+      'private-email',
+      'toggle-password',
+      'generate-button',
+      'reset-button',
+      'word-count-12',
+      'word-count-24',
+    ]) {
       const size = await page.locator(`#${id}`).boundingBox();
       expect(size.height).toBeGreaterThanOrEqual(44);
       expect(size.width).toBeGreaterThanOrEqual(44);
@@ -186,7 +203,35 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
   } finally {
     page.on('console', collectConsoleError);
   }
+  await page.locator('#word-count-24').click();
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(24);
+  await expect(page.locator('#mnemonic-grid .word-value').first()).toHaveText('••••••');
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(
+    fixture24.mnemonic.split(' '),
+  );
+  for (const chain of ['btc', 'eth', 'sol', 'zec']) {
+    await page.locator('#tab-' + chain).click();
+    await expect(page.locator('.address-text')).toHaveText(
+      fixture24.addresses[chain].map((row) => row.address),
+    );
+  }
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+  }
+  page.off('console', collectConsoleError);
+  try {
+    await page
+      .locator('#output-panel')
+      .screenshot({ path: testInfo.outputPath('webkit-24-words.png') });
+  } finally {
+    page.on('console', collectConsoleError);
+  }
   await page.locator('#reset-button').click();
+  await expect(page.locator('#word-count-12')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
   expect(requests).toEqual([]);
   expect(errors).toEqual([]);

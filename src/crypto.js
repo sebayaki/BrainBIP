@@ -21,7 +21,7 @@ const INPUT_ERROR_MESSAGES = new Set([
   'Enter a passphrase.',
   'Passphrase must contain at most 1024 characters and email at most 320 characters after normalization.',
   'Passphrase and email must contain valid Unicode text.',
-  'Enter a valid 12-word English BIP39 phrase.',
+  'Enter a valid 12- or 24-word English BIP39 phrase.',
   'Address count must be an integer from 1 to 20.',
   ...Object.values(DERIVATION_ERROR_MESSAGES),
 ]);
@@ -148,13 +148,13 @@ function validateAddressCount(count) {
 
 function canonicalizeMnemonic(mnemonic) {
   if (typeof mnemonic !== 'string')
-    throw new TypeError('Enter a valid 12-word English BIP39 phrase.');
+    throw new TypeError('Enter a valid 12- or 24-word English BIP39 phrase.');
   const canonicalMnemonic = mnemonic.normalize('NFKD').trim().split(/\s+/u).join(' ');
   if (
-    canonicalMnemonic.split(' ').length !== PROFILE.mnemonicWords ||
+    !PROFILE.supportedWordCounts.includes(canonicalMnemonic.split(' ').length) ||
     !validateMnemonic(canonicalMnemonic, wordlist)
   ) {
-    throw new Error('Enter a valid 12-word English BIP39 phrase.');
+    throw new Error('Enter a valid 12- or 24-word English BIP39 phrase.');
   }
   return canonicalMnemonic;
 }
@@ -252,7 +252,6 @@ export async function deriveWallet(passphrase, email = '', onStage = () => {}) {
   let argonKey;
   let pbkdfKey;
   let mixed;
-  let entropy;
   try {
     onStage('argon2id');
     argonKey = await argon2id({
@@ -276,21 +275,16 @@ export async function deriveWallet(passphrase, email = '', onStage = () => {}) {
     mixed = new Uint8Array(PROFILE.argon2id.outputBytes);
     for (let index = 0; index < mixed.length; index += 1)
       mixed[index] = argonKey[index] ^ pbkdfKey[index];
-    entropy = mixed.slice(0, PROFILE.entropyBytes);
-    const mnemonic = entropyToMnemonic(entropy, wordlist);
     onStage('addresses');
-    return { mnemonic, addresses: deriveAddresses(mnemonic), profile: PROFILE.id };
+    const wallets = {};
+    for (const wordCount of PROFILE.supportedWordCounts) {
+      const entropy = mixed.subarray(0, PROFILE.entropyBytesByWordCount[wordCount]);
+      const mnemonic = entropyToMnemonic(entropy, wordlist);
+      wallets[wordCount] = { mnemonic, addresses: deriveAddresses(mnemonic) };
+    }
+    return { profile: PROFILE.id, wallets };
   } finally {
-    for (const buffer of [
-      password,
-      emailBytes,
-      argonSalt,
-      pbkdfSalt,
-      argonKey,
-      pbkdfKey,
-      mixed,
-      entropy,
-    ]) {
+    for (const buffer of [password, emailBytes, argonSalt, pbkdfSalt, argonKey, pbkdfKey, mixed]) {
       buffer?.fill(0);
     }
   }

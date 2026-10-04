@@ -194,7 +194,7 @@ test('chain and path validation occur before mnemonic derivation with no reflect
     { message: DERIVATION_ERROR_MESSAGES.path },
   );
   assert.throws(() => deriveChainAddresses(mnemonic, 'eth', { presetId: 'standard' }), {
-    message: 'Enter a valid 12-word English BIP39 phrase.',
+    message: 'Enter a valid 12- or 24-word English BIP39 phrase.',
   });
   for (const count of [0, 21, -1, 1.5, '20']) {
     assert.throws(() => deriveChainAddresses(standardMnemonic, 'eth', undefined, count), {
@@ -226,6 +226,19 @@ test('default chain derivation preserves both existing sets of 80 addresses exac
     for (const chain of chains) {
       assert.deepEqual(deriveChainAddresses(expected.mnemonic, chain), expected.addresses[chain]);
     }
+  }
+});
+
+test('24-word mnemonics derive every preset and custom example through the same validated paths', async () => {
+  const expected = await fixture('brainbip-24.json');
+  assert.deepEqual(deriveAddresses(expected.mnemonic), expected.addresses);
+  const presets = await fixture('address-presets.json');
+  for (const { chain, selection } of presets.vectors) {
+    const { path, addressType } = resolveDerivation(chain, selection);
+    assert.deepEqual(
+      deriveChainAddresses(expected.mnemonic, chain, selection),
+      await referenceChainAddresses(expected.mnemonic, chain, path, addressType),
+    );
   }
 });
 
@@ -276,8 +289,10 @@ test('address worker sends only rows or sanitized errors and closes after one re
     await readFile(new URL('../src/addresses.worker.js', import.meta.url), 'utf8')
   ).replace(/^import[\s\S]*?;\n/u, '');
   const expected = await fixture('address-presets.json');
+  const expected24 = await fixture('brainbip-24.json');
   const vector = expected.vectors[0];
-  for (const valid of [true, false]) {
+  for (const mnemonic of [expected.mnemonic, expected24.mnemonic, 'private-user-text']) {
+    const valid = mnemonic !== 'private-user-text';
     const messages = [];
     let closed = 0;
     const self = {
@@ -290,7 +305,7 @@ test('address worker sends only rows or sanitized errors and closes after one re
     self.onmessage({
       data: {
         id: 7,
-        mnemonic: valid ? expected.mnemonic : 'private-user-text',
+        mnemonic,
         chain: vector.chain,
         selection: vector.selection,
       },
@@ -301,13 +316,13 @@ test('address worker sends only rows or sanitized errors and closes after one re
       assert.deepEqual(JSON.parse(JSON.stringify(messages[0])), {
         id: 7,
         type: 'result',
-        rows: vector.rows,
+        rows: mnemonic === expected24.mnemonic ? expected24.addresses.btc : vector.rows,
       });
     } else {
       assert.deepEqual(JSON.parse(JSON.stringify(messages[0])), {
         id: 7,
         type: 'error',
-        message: 'Enter a valid 12-word English BIP39 phrase.',
+        message: 'Enter a valid 12- or 24-word English BIP39 phrase.',
       });
     }
     assert.ok(!JSON.stringify(messages).includes('private-user-text'));

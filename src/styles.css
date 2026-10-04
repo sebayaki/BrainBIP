@@ -587,6 +587,52 @@ input::placeholder {
   display: flex;
   flex-direction: column;
 }
+.output-heading {
+  margin-bottom: 12px;
+}
+.output-heading > div:first-child {
+  min-width: 0;
+}
+.word-count-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f4f8ed;
+}
+.word-count-switch button {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.word-count-switch button:hover {
+  background: var(--green-soft);
+}
+.word-count-switch button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--surface);
+}
+.word-count-switch button:focus-visible {
+  outline-offset: -2px;
+}
+.word-count-switch button[aria-pressed='true']:focus-visible {
+  outline-color: var(--surface);
+}
+.word-count-note {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .empty-state {
   flex: 1;
 }
@@ -659,14 +705,19 @@ input::placeholder {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .chain-pills > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-width: 40px;
   padding: 6px 8px;
   border: 1px solid #dfe6d6;
   border-radius: 4px;
-  font-family: var(--mono);
-  font-size: 10px;
+  font-family: var(--sans);
+  font-size: 12px;
   color: var(--muted);
   background: #f7faf1;
 }
@@ -1736,6 +1787,18 @@ input::placeholder {
   .panel-heading {
     margin-bottom: 24px;
   }
+  .output-heading {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .word-count-switch button {
+    min-width: 58px;
+    padding: 8px 6px;
+  }
+  .word-count-note {
+    margin-bottom: 20px;
+    font-size: 11px;
+  }
   .panel-heading h2 {
     font-size: 18px;
   }
@@ -1788,12 +1851,15 @@ input::placeholder {
     display: none;
   }
   .chain-pills {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 272px);
     gap: 8px;
   }
   .chain-pills > span {
-    min-width: 36px;
-    padding: 6px;
-    font-size: 9px;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 11px;
   }
   .result-subheading {
     align-items: flex-start;
@@ -2113,7 +2179,7 @@ input::placeholder {
     gap: 6px;
   }
   .chain-pills > span {
-    min-width: 32px;
+    min-width: 0;
   }
   .empty-word-lines {
     grid-template-columns: 12px 20px;

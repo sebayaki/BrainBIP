@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { pbkdf2Sync } from 'node:crypto';
+import { runInNewContext } from 'node:vm';
 import { argon2id, createSHA256, pbkdf2 } from 'hash-wasm';
 import { argon2idAsync as referenceArgon2id } from '@noble/hashes/argon2.js';
 import { entropyToMnemonic, mnemonicToSeedSync } from '@scure/bip39';
@@ -50,9 +51,9 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
     profile.pbkdf2.outputBytes,
     'sha256',
   );
-  const entropy = Buffer.from(argonKey.slice(0, profile.entropyBytes)).map(
-    (byte, index) => byte ^ pbkdfKey[index],
-  );
+  const entropy = Buffer.from(
+    argonKey.slice(0, profile.entropyBytesByWordCount[profile.defaultWordCount]),
+  ).map((byte, index) => byte ^ pbkdfKey[index]);
   const mnemonic = referenceMnemonic(entropy);
   const production = {
     warning: 'PUBLIC TEST VECTOR. NEVER DEPOSIT FUNDS TO THESE ADDRESSES.',
@@ -107,8 +108,9 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
     assert.equal(PROFILE.maxPassphraseCharacters, 1024);
     assert.equal(PROFILE.maxEmailCharacters, 320);
     assert.equal(PROFILE.addressCount, 20);
-    assert.equal(PROFILE.entropyBytes, 16);
-    assert.equal(PROFILE.mnemonicWords, 12);
+    assert.equal(PROFILE.defaultWordCount, 12);
+    assert.deepEqual(PROFILE.supportedWordCounts, [12, 24]);
+    assert.deepEqual(PROFILE.entropyBytesByWordCount, { 12: 16, 24: 32 });
     assert.equal(PROFILE.bip39Passphrase, '');
     assert.deepEqual(PROFILE.paths, {
       btc: "m/84'/0'/0'/0/{index}",
@@ -116,7 +118,14 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
       sol: "m/44'/501'/{index}'/0'",
       zec: "m/44'/133'/0'/0/{index}",
     });
-    for (const value of [PROFILE, PROFILE.argon2id, PROFILE.pbkdf2, PROFILE.paths])
+    for (const value of [
+      PROFILE,
+      PROFILE.argon2id,
+      PROFILE.pbkdf2,
+      PROFILE.paths,
+      PROFILE.supportedWordCounts,
+      PROFILE.entropyBytesByWordCount,
+    ])
       assert.ok(Object.isFrozen(value));
     assert.throws(() => {
       PROFILE.argon2id.memoryKiB = 8;
@@ -205,6 +214,9 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
   test('BIP39 matches the official Trezor English test vector', () => {
     // https://github.com/trezor/python-mnemonic/blob/master/vectors.json
     assert.equal(entropyToMnemonic(new Uint8Array(16), wordlist), standardMnemonic);
+    const standard24 = [...Array(23).fill('abandon'), 'art'].join(' ');
+    assert.equal(entropyToMnemonic(new Uint8Array(32), wordlist), standard24);
+    assert.equal(referenceMnemonic(Buffer.alloc(32)), standard24);
     assert.equal(
       Buffer.from(mnemonicToSeedSync(standardMnemonic, 'TREZOR')).toString('hex'),
       'c55257c360c07c72029aebc1b53c05ed0362ada38ead3e3e9efa3708e53495531f09a6987599d18264c1e1c92f2cf141630c7a3c4ab7c81b2f001698e7463b04',
@@ -259,15 +271,64 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
     }
   });
 
-  test('invalid mnemonic/count are rejected and mnemonic whitespace is canonicalized', () => {
+  test('only valid 12- and 24-word mnemonics are accepted and whitespace is canonicalized', async () => {
     for (const count of [0, -1, 21, 1.5, NaN, '20'])
       assert.throws(() => deriveAddresses(standardMnemonic, count));
-    for (const mnemonic of ['', 'abandon '.repeat(12).trim(), null])
-      assert.throws(() => deriveAddresses(mnemonic));
+    for (const mnemonic of [
+      '',
+      'abandon '.repeat(12).trim(),
+      'abandon '.repeat(24).trim(),
+      ...[20, 24, 28].map((bytes) => entropyToMnemonic(new Uint8Array(bytes), wordlist)),
+      null,
+      24,
+      {},
+    ])
+      assert.throws(() => deriveAddresses(mnemonic), {
+        message: 'Enter a valid 12- or 24-word English BIP39 phrase.',
+      });
     assert.deepEqual(
       deriveAddresses('  ' + standardMnemonic.replaceAll(' ', '\n') + '  ', 1),
       deriveAddresses(standardMnemonic, 1),
     );
+    const expected24 = await fixture('brainbip-24.json');
+    assert.deepEqual(
+      deriveAddresses('  ' + expected24.mnemonic.replaceAll(' ', '\n') + '  '),
+      expected24.addresses,
+    );
+  });
+
+  test('24-word fixture uses the full public XOR and matches independent BIP39 and address references', async () => {
+    const source = await fixture('brainbip-v2.json');
+    const expected = await fixture('brainbip-24.json');
+    const pbkdfKey = Buffer.from(source.pbkdfKeyHex, 'hex');
+    const entropy = Buffer.from(source.argonKeyHex, 'hex').map(
+      (byte, index) => byte ^ pbkdfKey[index],
+    );
+    assert.equal(expected.wordCount, 24);
+    assert.equal(expected.profile, PROFILE.id);
+    assert.equal(expected.entropyHex, entropy.toString('hex'));
+    assert.equal(expected.entropyHex.slice(0, 32), source.entropyHex);
+    assert.equal(referenceMnemonic(entropy), expected.mnemonic);
+    assert.equal(referenceMnemonic(entropy.subarray(0, 16)), source.mnemonic);
+    assert.equal(expected.mnemonic.split(' ').length, 24);
+    assert.notEqual(expected.mnemonic.split(' ').slice(0, 12).join(' '), source.mnemonic);
+    assert.equal(
+      pbkdf2Sync(
+        Buffer.from(expected.mnemonic),
+        Buffer.from('mnemonic'),
+        2048,
+        64,
+        'sha512',
+      ).toString('hex'),
+      expected.bip39SeedHex,
+    );
+    assert.deepEqual(await referenceAddresses(expected.mnemonic), expected.addresses);
+    assert.deepEqual(deriveAddresses(expected.mnemonic), expected.addresses);
+    for (const chain of ['btc', 'eth', 'sol', 'zec']) {
+      assert.notEqual(expected.addresses[chain][0].address, source.addresses[chain][0].address);
+    }
+    entropy.fill(0);
+    pbkdfKey.fill(0);
   });
 
   test('worker-facing error text never forwards raw library/input errors', () => {
@@ -275,6 +336,73 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
     assert.ok(!safeErrorMessage(new Error(secret)).includes(secret));
     assert.ok(!safeErrorMessage({ message: secret }).includes(secret));
     assert.equal(safeErrorMessage(new Error('Enter a passphrase.')), 'Enter a passphrase.');
+    assert.equal(
+      safeErrorMessage(new Error('Enter a valid 12- or 24-word English BIP39 phrase.')),
+      'Enter a valid 12- or 24-word English BIP39 phrase.',
+    );
+  });
+
+  test('wallet worker runs one job and returns both word counts with sanitized failures', async () => {
+    const source = (
+      await readFile(new URL('../src/wallet.worker.js', import.meta.url), 'utf8')
+    ).replace(/^import[\s\S]*?;\n/u, '');
+    const expected12 = await fixture('brainbip-v2.json');
+    const expected24 = await fixture('brainbip-24.json');
+    const result = {
+      profile: PROFILE.id,
+      wallets: {
+        12: { mnemonic: expected12.mnemonic, addresses: expected12.addresses },
+        24: { mnemonic: expected24.mnemonic, addresses: expected24.addresses },
+      },
+    };
+    for (const fail of [false, true]) {
+      const messages = [];
+      let calls = 0;
+      let closed = 0;
+      const self = {
+        postMessage: (message) => messages.push(message),
+        close: () => {
+          closed += 1;
+        },
+      };
+      runInNewContext(source, {
+        self,
+        safeErrorMessage,
+        deriveWallet: async (passphrase, email, onStage) => {
+          calls += 1;
+          assert.equal(passphrase, 'private-passphrase-never-forward');
+          assert.equal(email, 'private-email-never-forward');
+          if (fail) throw new Error('private-library-error-never-forward');
+          for (const stage of ['argon2id', 'pbkdf2', 'addresses']) onStage(stage);
+          return result;
+        },
+      });
+      await self.onmessage({
+        data: {
+          id: 7,
+          passphrase: 'private-passphrase-never-forward',
+          email: 'private-email-never-forward',
+        },
+      });
+      assert.equal(calls, 1);
+      assert.equal(closed, 1);
+      const plainMessages = JSON.parse(JSON.stringify(messages));
+      if (fail) {
+        assert.deepEqual(plainMessages, [
+          { id: 7, type: 'error', message: safeErrorMessage(new Error('unknown')) },
+        ]);
+      } else {
+        assert.deepEqual(plainMessages, [
+          ...['argon2id', 'pbkdf2', 'addresses'].map((stage) => ({ id: 7, type: 'stage', stage })),
+          { id: 7, type: 'result', result },
+        ]);
+      }
+      assert.ok(!JSON.stringify(messages).includes('private-'));
+      await self.onmessage({ data: { id: 8, passphrase: 'unused' } });
+      assert.equal(calls, 1);
+      assert.equal(messages.at(-1).type, 'error');
+      assert.equal(closed, 1);
+    }
   });
 
   test(
@@ -282,25 +410,33 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
     { timeout: 120000 },
     async (context) => {
       const expected = await fixture('brainbip-v2.json');
+      const expected24 = await fixture('brainbip-24.json');
       const stages = [];
       const started = performance.now();
       const actual = await deriveWallet(expected.passphrase, expected.email, (stage) =>
         stages.push(stage),
       );
       context.diagnostic(
-        `Full 512 MiB/t16 Argon2id + 5,242,880 PBKDF2 + 80 addresses: ${(performance.now() - started).toFixed(0)} ms`,
+        `One full 512 MiB/t16 Argon2id + 5,242,880 PBKDF2 + both word counts/160 addresses: ${(performance.now() - started).toFixed(0)} ms`,
       );
       assert.deepEqual(stages, ['argon2id', 'pbkdf2', 'addresses']);
       assert.deepEqual(actual, {
         profile: 'brainbip-v2',
-        mnemonic: expected.mnemonic,
-        addresses: expected.addresses,
+        wallets: {
+          12: { mnemonic: expected.mnemonic, addresses: expected.addresses },
+          24: { mnemonic: expected24.mnemonic, addresses: expected24.addresses },
+        },
       });
       assert.equal(
-        Buffer.from(mnemonicToSeedSync(actual.mnemonic, '')).toString('hex'),
+        Buffer.from(mnemonicToSeedSync(actual.wallets[12].mnemonic, '')).toString('hex'),
         expected.bip39SeedHex,
       );
-      assert.deepEqual(await referenceAddresses(actual.mnemonic), expected.addresses);
+      assert.equal(
+        Buffer.from(mnemonicToSeedSync(actual.wallets[24].mnemonic, '')).toString('hex'),
+        expected24.bip39SeedHex,
+      );
+      assert.deepEqual(await referenceAddresses(actual.wallets[12].mnemonic), expected.addresses);
+      assert.deepEqual(await referenceAddresses(actual.wallets[24].mnemonic), expected24.addresses);
       const password = Buffer.from(expected.normalizedPassphrase);
       const argonSalt = Buffer.from(expected.argonSaltHex, 'hex');
       const pbkdfSalt = Buffer.from(expected.pbkdfSaltHex, 'hex');
@@ -318,11 +454,11 @@ if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {
       assert.equal(Buffer.from(argonKey).toString('hex'), expected.argonKeyHex);
       const pbkdfKey = pbkdf2Sync(password, pbkdfSalt, 5242880, 32, 'sha256');
       assert.equal(pbkdfKey.toString('hex'), expected.pbkdfKeyHex);
-      const entropy = Buffer.from(argonKey.slice(0, 16)).map(
-        (byte, index) => byte ^ pbkdfKey[index],
-      );
-      assert.equal(entropy.toString('hex'), expected.entropyHex);
-      assert.equal(referenceMnemonic(entropy), actual.mnemonic);
+      const entropy = Buffer.from(argonKey).map((byte, index) => byte ^ pbkdfKey[index]);
+      assert.equal(entropy.toString('hex'), expected24.entropyHex);
+      assert.equal(entropy.subarray(0, 16).toString('hex'), expected.entropyHex);
+      assert.equal(referenceMnemonic(entropy.subarray(0, 16)), actual.wallets[12].mnemonic);
+      assert.equal(referenceMnemonic(entropy), actual.wallets[24].mnemonic);
       for (const bytes of [password, argonSalt, pbkdfSalt, argonKey, pbkdfKey, entropy])
         bytes.fill(0);
     },

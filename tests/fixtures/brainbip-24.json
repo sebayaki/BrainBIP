@@ -1,0 +1,420 @@
+{
+  "warning": "PUBLIC TEST VECTOR. NEVER DEPOSIT FUNDS TO THESE ADDRESSES.",
+  "provenance": "Full 32-byte XOR of the independently verified public Argon2id and PBKDF2 outputs in the source fixture; independent BIP39 bit/checksum encoding, Node/OpenSSL seed and HD/address reference implementations.",
+  "sourceFixture": "brainbip-v2.json",
+  "profile": "brainbip-v2",
+  "wordCount": 24,
+  "entropyHex": "2f3822209d72a55246780667dd99ed8f5257d1b4fda9b0f915dc08f17f8a648b",
+  "mnemonic": "connect scissors market depend clean powder boring absorb guitar under kiwi burger century trip stadium release rail silly jacket ball blood share mutual invest",
+  "bip39SeedHex": "d0e8ea6f17ea6820dfb1383b886e454e37169a56d1e492685d7405d18d39cf4b72337b25994692c913e3d7a9917d6264137365cc377bd423f5e95f019daa2329",
+  "addresses": {
+    "btc": [
+      {
+        "index": 0,
+        "path": "m/84'/0'/0'/0/0",
+        "address": "bc1qjr8g03phj83edney6xrfw4wtraxn27zcvjzc2d"
+      },
+      {
+        "index": 1,
+        "path": "m/84'/0'/0'/0/1",
+        "address": "bc1q0dmuskgqc0qsjcw5elw4w4mmn5lf8w77uv6626"
+      },
+      {
+        "index": 2,
+        "path": "m/84'/0'/0'/0/2",
+        "address": "bc1qq7qnfgw95tptx88hlw64dp6l8mw5l5s7lswyr5"
+      },
+      {
+        "index": 3,
+        "path": "m/84'/0'/0'/0/3",
+        "address": "bc1qauukpzttcksnz5v58knk56q68n3zaag2nn4swn"
+      },
+      {
+        "index": 4,
+        "path": "m/84'/0'/0'/0/4",
+        "address": "bc1qzm8vwadaum68fyg7cug039fuu8sm7xedl3s9et"
+      },
+      {
+        "index": 5,
+        "path": "m/84'/0'/0'/0/5",
+        "address": "bc1qy82zg38z7jjqqzfz4sat6pvhxvc3ljwdxvtpgf"
+      },
+      {
+        "index": 6,
+        "path": "m/84'/0'/0'/0/6",
+        "address": "bc1qcqvfzfwz9d4rffds5tvsv9wx5er870n36x74wd"
+      },
+      {
+        "index": 7,
+        "path": "m/84'/0'/0'/0/7",
+        "address": "bc1qcg2md8cxrvheahsun6nm05yk6dzwy7svv9ermf"
+      },
+      {
+        "index": 8,
+        "path": "m/84'/0'/0'/0/8",
+        "address": "bc1qxfnl4dnc69g5y0kmmlrgdfcasujwxn3ayp846a"
+      },
+      {
+        "index": 9,
+        "path": "m/84'/0'/0'/0/9",
+        "address": "bc1qu2qqrm38x8jkpxauetcwm6jqzhs7l35yl0glt8"
+      },
+      {
+        "index": 10,
+        "path": "m/84'/0'/0'/0/10",
+        "address": "bc1qjqx36ltvv3ktjns4gzaku8qgfwlduvfkymzzat"
+      },
+      {
+        "index": 11,
+        "path": "m/84'/0'/0'/0/11",
+        "address": "bc1qw874mqq5u0r3s0xqrqxvsqu74uyy96q2z6s7m4"
+      },
+      {
+        "index": 12,
+        "path": "m/84'/0'/0'/0/12",
+        "address": "bc1qp5hck0a45ahptrdax3k08qg76zm7qjdd40yk5g"
+      },
+      {
+        "index": 13,
+        "path": "m/84'/0'/0'/0/13",
+        "address": "bc1qx856x9yp4rczzz8ww3jqx7kmlstj2vte04np8c"
+      },
+      {
+        "index": 14,
+        "path": "m/84'/0'/0'/0/14",
+        "address": "bc1qnkeyevjqanr9me8c2rpm36tt7ej4vywvc5kpp4"
+      },
+      {
+        "index": 15,
+        "path": "m/84'/0'/0'/0/15",
+        "address": "bc1qxa8gr9l3l8hg9kd02km9qsczkjev7cpugulsgu"
+      },
+      {
+        "index": 16,
+        "path": "m/84'/0'/0'/0/16",
+        "address": "bc1qps7l4tdt54f00m9ap5x8pe9uaah33v53dg2dvm"
+      },
+      {
+        "index": 17,
+        "path": "m/84'/0'/0'/0/17",
+        "address": "bc1qwlkxxarvhyhvfjs6u92jveqqj0r7k4xv7p4903"
+      },
+      {
+        "index": 18,
+        "path": "m/84'/0'/0'/0/18",
+        "address": "bc1qjp7sr9sdngk6p57cat8taaled5uuctdntak57m"
+      },
+      {
+        "index": 19,
+        "path": "m/84'/0'/0'/0/19",
+        "address": "bc1qyqygvjdhv2zmzf72t3w8whqmyvqzwhqwf050cl"
+      }
+    ],
+    "eth": [
+      {
+        "index": 0,
+        "path": "m/44'/60'/0'/0/0",
+        "address": "0x2BF8D78A31b441EBF59064a67674129A81c3DA0d"
+      },
+      {
+        "index": 1,
+        "path": "m/44'/60'/0'/0/1",
+        "address": "0xE0Fd0fC2Cbe9D1DD79dB4206a70d0Cb2a68EbB5b"
+      },
+      {
+        "index": 2,
+        "path": "m/44'/60'/0'/0/2",
+        "address": "0x6a74288600708C303b6Bb606d49ACd0Aac674568"
+      },
+      {
+        "index": 3,
+        "path": "m/44'/60'/0'/0/3",
+        "address": "0x9D9bf441F8699725a6bD203e9de979dB3f1DaAf0"
+      },
+      {
+        "index": 4,
+        "path": "m/44'/60'/0'/0/4",
+        "address": "0x8D7f54c1C80fD16934eB0851D40c9D7f8ce17E9c"
+      },
+      {
+        "index": 5,
+        "path": "m/44'/60'/0'/0/5",
+        "address": "0xf6d4aC68EdD96777Ea9F05F1BdBE6af708A8C7F2"
+      },
+      {
+        "index": 6,
+        "path": "m/44'/60'/0'/0/6",
+        "address": "0xc39762B1448cEA069E27431D040B3ED815e46DF5"
+      },
+      {
+        "index": 7,
+        "path": "m/44'/60'/0'/0/7",
+        "address": "0x6a1660909C765b329AB0aaD65eA7AE580E0b8c08"
+      },
+      {
+        "index": 8,
+        "path": "m/44'/60'/0'/0/8",
+        "address": "0xE6D7fc71f79f843C18Ef7a5056370284622555eB"
+      },
+      {
+        "index": 9,
+        "path": "m/44'/60'/0'/0/9",
+        "address": "0x4c3b7a4e48C66820DF6cc2E1E41861BbeC50d247"
+      },
+      {
+        "index": 10,
+        "path": "m/44'/60'/0'/0/10",
+        "address": "0xDD3cFD81139fD62288657952D6AA1775de5EC3da"
+      },
+      {
+        "index": 11,
+        "path": "m/44'/60'/0'/0/11",
+        "address": "0xcC51BD888748B9Cb738Fe2ED8A1014576c074f43"
+      },
+      {
+        "index": 12,
+        "path": "m/44'/60'/0'/0/12",
+        "address": "0x90925C876E4Cea91763f04340aAadB7371AAE5Ab"
+      },
+      {
+        "index": 13,
+        "path": "m/44'/60'/0'/0/13",
+        "address": "0x5696aDC8135F7A01Fc83A5C9DAe9b83790aD680C"
+      },
+      {
+        "index": 14,
+        "path": "m/44'/60'/0'/0/14",
+        "address": "0x633b2187c60416399D8C16E429592B92bb169595"
+      },
+      {
+        "index": 15,
+        "path": "m/44'/60'/0'/0/15",
+        "address": "0x2EE194b5e47298B4CFEd4B11348a07246f7f5B21"
+      },
+      {
+        "index": 16,
+        "path": "m/44'/60'/0'/0/16",
+        "address": "0x3645d473Fce353EE0334101126ed9570c2720a38"
+      },
+      {
+        "index": 17,
+        "path": "m/44'/60'/0'/0/17",
+        "address": "0x8301DB2229961A2Cd43634873c3CDe3B218f6342"
+      },
+      {
+        "index": 18,
+        "path": "m/44'/60'/0'/0/18",
+        "address": "0x3AD00060bC339Ba554C6846BaFA2249409E62f7c"
+      },
+      {
+        "index": 19,
+        "path": "m/44'/60'/0'/0/19",
+        "address": "0x4a048039a3c9F73F5281546a13588cad76b67423"
+      }
+    ],
+    "sol": [
+      {
+        "index": 0,
+        "path": "m/44'/501'/0'/0'",
+        "address": "CEbZMvCCDbgLssKd5S95kQ9k8kwmo4XyNbkRAHXH1VTp"
+      },
+      {
+        "index": 1,
+        "path": "m/44'/501'/1'/0'",
+        "address": "DEcTuXubZzZQvTPCahk9Ba8KsJDkDJa3JVGJp6dffSF"
+      },
+      {
+        "index": 2,
+        "path": "m/44'/501'/2'/0'",
+        "address": "7CefQ3pRmPaakg2Sz1pKX37j7dgwZUFrcVUYvfmy7duj"
+      },
+      {
+        "index": 3,
+        "path": "m/44'/501'/3'/0'",
+        "address": "D7PMRY1gXbQBDMnRPm8RCVoenUsu3vEnj2XJVcdHzX3T"
+      },
+      {
+        "index": 4,
+        "path": "m/44'/501'/4'/0'",
+        "address": "GGyhCmKhA8nxewdmvUpMdwwPt3zd3Aa1fabCJNFgcFAh"
+      },
+      {
+        "index": 5,
+        "path": "m/44'/501'/5'/0'",
+        "address": "8b9Te9H76AUCkASc6tsJ9BiFh8DcCZT8QGgnBaW7J1mh"
+      },
+      {
+        "index": 6,
+        "path": "m/44'/501'/6'/0'",
+        "address": "Fnay8nqwyxqSzcHxM2HQ96WdjrpC6XEtLgXK9dZZZmip"
+      },
+      {
+        "index": 7,
+        "path": "m/44'/501'/7'/0'",
+        "address": "3BZ3u7nHjHn26szZWQiXkpnNs6yG9UNtgpQPfYJ9qjBu"
+      },
+      {
+        "index": 8,
+        "path": "m/44'/501'/8'/0'",
+        "address": "4RyFMFKHDc8skZewWGhwzwuroCDtPsf2kFisgzVLT8Ju"
+      },
+      {
+        "index": 9,
+        "path": "m/44'/501'/9'/0'",
+        "address": "CDaa9mtWTYfdX3CFdVmLBtSzKjByukg5gi8ccsrsFAPF"
+      },
+      {
+        "index": 10,
+        "path": "m/44'/501'/10'/0'",
+        "address": "9AEfJDedojcdSvpSCxRvMuddg73o33xDbPKSmkkaUUQ"
+      },
+      {
+        "index": 11,
+        "path": "m/44'/501'/11'/0'",
+        "address": "C5X1YS76nssHAjydEqMgcU1jzRmVmpNBDEcGsy7bkUZT"
+      },
+      {
+        "index": 12,
+        "path": "m/44'/501'/12'/0'",
+        "address": "AGtGBYwPPfHcfWbjHzFYtQkHnqFFvikeYoAc6UFHC3ou"
+      },
+      {
+        "index": 13,
+        "path": "m/44'/501'/13'/0'",
+        "address": "EoaAJXac9CCgz16imj17gEXnuhbaTjmaXkJEQ3sLTpDB"
+      },
+      {
+        "index": 14,
+        "path": "m/44'/501'/14'/0'",
+        "address": "9A7EFTboSSzhKU4kjx3Wm9rZwptu3WnYqUzfaBuCHXhq"
+      },
+      {
+        "index": 15,
+        "path": "m/44'/501'/15'/0'",
+        "address": "EvqcWcQrj8jUrAB3dqg66uSjUWaEHXddL54DTWgPzWYh"
+      },
+      {
+        "index": 16,
+        "path": "m/44'/501'/16'/0'",
+        "address": "BQu6Wkt2Hev4Xm3P44CLtJGDjN3PQFVvqdBXtpFjf9LM"
+      },
+      {
+        "index": 17,
+        "path": "m/44'/501'/17'/0'",
+        "address": "7zhKdDZHC5ch2y1TbrMm3mHfNdUrTvS8qVnrdhB14kPu"
+      },
+      {
+        "index": 18,
+        "path": "m/44'/501'/18'/0'",
+        "address": "3mFJ1nZ8uEG44TnR6buV1u6nPuZXwFZXuQEfUPnvwqm8"
+      },
+      {
+        "index": 19,
+        "path": "m/44'/501'/19'/0'",
+        "address": "DFs2fagcHDysxsEtYQVJURN79osw29e3FDvm8EBvwfMU"
+      }
+    ],
+    "zec": [
+      {
+        "index": 0,
+        "path": "m/44'/133'/0'/0/0",
+        "address": "t1S1kSoKFBGaaBcGWdwhvtapeSJTrdHujNq"
+      },
+      {
+        "index": 1,
+        "path": "m/44'/133'/0'/0/1",
+        "address": "t1f4HgjMYMPGsEAqEJGepY3t25FgQfsaxSu"
+      },
+      {
+        "index": 2,
+        "path": "m/44'/133'/0'/0/2",
+        "address": "t1Tenhy37dtynfiENrYRxBnAV9ktQBzhSvS"
+      },
+      {
+        "index": 3,
+        "path": "m/44'/133'/0'/0/3",
+        "address": "t1R4mcGvHCKnCHnMm3k9p47Siqj312cUnzx"
+      },
+      {
+        "index": 4,
+        "path": "m/44'/133'/0'/0/4",
+        "address": "t1KhXPYad9Ej93dqMPhpns2zMM3PD5TnxUh"
+      },
+      {
+        "index": 5,
+        "path": "m/44'/133'/0'/0/5",
+        "address": "t1Zcg9iD5aPsiZfH3T9QQAxD3B2cH9tz65s"
+      },
+      {
+        "index": 6,
+        "path": "m/44'/133'/0'/0/6",
+        "address": "t1eCkHN8CxsMT78zGuayaDUhz7UN8D8wXCv"
+      },
+      {
+        "index": 7,
+        "path": "m/44'/133'/0'/0/7",
+        "address": "t1Wtx6XzSF5uNBB1cYPoVpufXBvaEK8mzFD"
+      },
+      {
+        "index": 8,
+        "path": "m/44'/133'/0'/0/8",
+        "address": "t1Tqi6PKQTAtseR4fHmcwrmUqUHDwuXn5n9"
+      },
+      {
+        "index": 9,
+        "path": "m/44'/133'/0'/0/9",
+        "address": "t1Xhh1ArXCLQnQZbY5xpriaZ2hbefEA26NX"
+      },
+      {
+        "index": 10,
+        "path": "m/44'/133'/0'/0/10",
+        "address": "t1PgR6FzaZKygbhnS63sLPHn57z63ANqSk4"
+      },
+      {
+        "index": 11,
+        "path": "m/44'/133'/0'/0/11",
+        "address": "t1QFHZqFiAGASsPzfbPF2XxmaGs8zL8HzTk"
+      },
+      {
+        "index": 12,
+        "path": "m/44'/133'/0'/0/12",
+        "address": "t1dUhbnusxYU1CQFbJHW31K2niGsH13CbA2"
+      },
+      {
+        "index": 13,
+        "path": "m/44'/133'/0'/0/13",
+        "address": "t1UccTrwBfY4gKvV73Jq1QgTC2KsqKMCRVL"
+      },
+      {
+        "index": 14,
+        "path": "m/44'/133'/0'/0/14",
+        "address": "t1YnscFoXsq7u9D6ACjc4Frh2zrLXTnKThg"
+      },
+      {
+        "index": 15,
+        "path": "m/44'/133'/0'/0/15",
+        "address": "t1bZFcK3HFh4vaPLtrzp8hEFH6eA7nb487o"
+      },
+      {
+        "index": 16,
+        "path": "m/44'/133'/0'/0/16",
+        "address": "t1UKpZD3dc3aEcujLSEv8JTg4S8bsHDZfRU"
+      },
+      {
+        "index": 17,
+        "path": "m/44'/133'/0'/0/17",
+        "address": "t1aWtTgQWu2gUwrunnjBNuYWgU1yNPqaQyd"
+      },
+      {
+        "index": 18,
+        "path": "m/44'/133'/0'/0/18",
+        "address": "t1WRU8Fdxr4xCzSABujjziXCVFyA8Ls3MjJ"
+      },
+      {
+        "index": 19,
+        "path": "m/44'/133'/0'/0/19",
+        "address": "t1J4DUNpdhPN9fPU5FmekAZ4skgDRwsGGEo"
+      }
+    ]
+  }
+}

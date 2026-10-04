@@ -9,6 +9,7 @@ self.onmessage = async ({ data }) => {
   }
   started = true;
   try {
+    // Both word counts share this one KDF job and are returned together.
     const result = await deriveWallet(data?.passphrase, data?.email ?? '', (stage) =>
       self.postMessage({ id, type: 'stage', stage }),
     );

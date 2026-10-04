@@ -1,4 +1,5 @@
 import { createWorkerOwner } from '../worker-task.js';
+import { PROFILE } from '../profiles.js';
 import {
   DERIVATION_ERROR_MESSAGES,
   getDerivationPresets,
@@ -110,19 +111,48 @@ export function createRecoveryView({
   onAddressChange,
 }) {
   const addressWorker = createWorkerOwner(workerSource);
+  let currentResults = null;
   let currentResult = null;
+  let wordCount = PROFILE.defaultWordCount;
   let currentRows = [];
   let choices = defaultChoices();
   let phraseVisible = false;
   let activeChain = 'btc';
   let renderedChain = null;
 
+  function renderWordCount() {
+    for (const count of PROFILE.supportedWordCounts) {
+      $('word-count-' + count).setAttribute('aria-pressed', String(wordCount === count));
+    }
+    for (const [index, number] of [...$('empty-last-words').querySelectorAll('span')].entries()) {
+      number.textContent = String(wordCount - 2 + index).padStart(2, '0');
+    }
+    $('progress-output-meta').textContent = `${wordCount} words · 4 networks`;
+    $('phrase-note').textContent =
+      `${wordCount === 12 ? 'Twelve' : 'Twenty-four'} words control this wallet. Keep them private.`;
+  }
+  function selectWordCount(count) {
+    if (wordCount === count) return;
+    addressWorker.stop();
+    wordCount = count;
+    phraseVisible = false;
+    renderWordCount();
+    if (!currentResults) {
+      onAddressChange();
+      return;
+    }
+    currentResult = currentResults.wallets[wordCount];
+    choices = defaultChoices(currentResult);
+    renderedChain = null;
+    renderMnemonic();
+    selectChain(activeChain);
+  }
   function renderMnemonic() {
     renderWordGrid(
       $('mnemonic-grid'),
       currentResult.mnemonic,
       phraseVisible,
-      'Twelve recovery words',
+      wordCount === 12 ? 'Twelve recovery words' : 'Twenty-four recovery words',
       'Recovery phrase hidden',
     );
     setRevealButton($('toggle-phrase'), phraseVisible);
@@ -297,6 +327,7 @@ export function createRecoveryView({
   }
   function clear() {
     addressWorker.stop();
+    currentResults = null;
     currentResult = null;
     currentRows = [];
     choices = defaultChoices();
@@ -317,11 +348,12 @@ export function createRecoveryView({
     setRevealButton($('toggle-phrase'), false);
     $('phrase-visibility-note').textContent = 'Hidden from view. Reveal when you are ready.';
   }
-  function show(result, seconds) {
+  function show(results, seconds) {
     addressWorker.stop();
-    currentResult = result;
+    currentResults = results;
+    currentResult = results.wallets[wordCount];
     currentRows = [];
-    choices = defaultChoices(result);
+    choices = defaultChoices(currentResult);
     activeChain = 'btc';
     renderedChain = null;
     phraseVisible = false;
@@ -329,6 +361,7 @@ export function createRecoveryView({
     $('empty-state').hidden = true;
     $('result-state').hidden = false;
     $('result-timing').textContent = `Derived locally in ${seconds}s`;
+    renderWordCount();
     renderMnemonic();
     selectChain(activeChain);
   }
@@ -341,6 +374,9 @@ export function createRecoveryView({
   $('copy-phrase').addEventListener('click', () => {
     if (currentResult) copyText(currentResult.mnemonic, 'Recovery phrase');
   });
+  for (const count of PROFILE.supportedWordCounts) {
+    $('word-count-' + count).addEventListener('click', () => selectWordCount(count));
+  }
   $('derivation-select').addEventListener('change', () => {
     if (!currentResult) return;
     const choice = choices[activeChain];
@@ -423,9 +459,13 @@ export function createRecoveryView({
     if (currentResult) revealTab($(`tab-${activeChain}`), true);
   });
 
+  renderWordCount();
+
   return {
     clear,
     show,
+    getWordCount: () => wordCount,
+    resetWordCount: () => selectWordCount(PROFILE.defaultWordCount),
     resetChain: () => {
       activeChain = 'btc';
     },

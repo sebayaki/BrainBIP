@@ -6,9 +6,9 @@ Application versions follow `MAJOR.MINOR.PATCH`, optionally followed by a prerel
 
 ## One fixed derivation
 
-The app exposes one fixed input-to-mnemonic algorithm and selectable Bitcoin, Ethereum, Solana, and Zcash address mappings. Application versions identify software builds; they are not adjustable KDF parameters. Address presets and custom paths operate on the generated phrase and do not change its derivation.
+The app exposes one fixed input-to-entropy computation, 12- and 24-word BIP39 mappings, and selectable Bitcoin, Ethereum, Solana, and Zcash address mappings. Application versions identify software builds; they are not adjustable KDF parameters. Both word counts use the same completed computation, but produce different wallets. Address presets and custom paths operate on the selected phrase and do not change its derivation.
 
-Check interface and dependency changes against the independent derivation vectors. Keep the specification, tests, and release notes aligned with the algorithm and address presets shipped in the build. Runtime parameters never adapt to device performance. Release 0.3.0 adds address choices while preserving the 0.2.0 mnemonic mapping and default address vectors.
+Check interface and dependency changes against the independent derivation vectors. Keep the specification, tests, and release notes aligned with both word-count mappings and the address presets shipped in the build. Runtime parameters never adapt to device performance. Release 0.4.0 adds 24-word output from all 32 XOR bytes while retaining the fixed KDF parameters and first-16-byte mapping for 12 words.
 
 ## Prepare a version
 

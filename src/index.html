@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f3ed" />
     <meta
       name="description"
-      content="A passphrase, twelve recovery words, and receiving addresses across four networks. BrainBIP is an offline-first experiment in deterministic wallet recovery."
+      content="A passphrase, twelve or twenty-four recovery words, and receiving addresses across four networks. BrainBIP is an offline-first experiment in deterministic wallet recovery."
     />
     <link
       rel="icon"
@@ -55,7 +55,7 @@
               <span class="status-dot" aria-hidden="true"></span> MEMORY → RECOVERY
             </p>
             <h1 id="page-title">A wallet to remember.</h1>
-            <p class="hero-description">Your passphrase. Twelve recovery words. Four networks.</p>
+            <p class="hero-description">Your passphrase. Recovery words. Four networks.</p>
           </div>
           <div class="hero-method" aria-hidden="true">
             <span>01 <b>Remember</b></span
@@ -198,7 +198,19 @@
                 <p class="panel-kicker">02 / RECOVERY</p>
                 <h2 id="output-heading">Your wallet, derived.</h2>
               </div>
+              <div
+                class="word-count-switch"
+                role="group"
+                aria-label="Recovery word count"
+                aria-describedby="word-count-note"
+              >
+                <button id="word-count-12" type="button" aria-pressed="true">12 words</button>
+                <button id="word-count-24" type="button" aria-pressed="false">24 words</button>
+              </div>
             </div>
+            <p id="word-count-note" class="word-count-note">
+              Word count changes your wallet. Recover with the same count.
+            </p>
 
             <div id="empty-state" class="empty-state">
               <div class="empty-art" aria-hidden="true">
@@ -211,7 +223,7 @@
                     <circle cx="54" cy="15" r="5"></circle>
                   </svg>
                 </div>
-                <div class="empty-word-lines">
+                <div id="empty-last-words" class="empty-word-lines">
                   <span>10</span><i></i><span>11</span><i></i><span>12</span><i></i>
                 </div>
               </div>
@@ -221,7 +233,70 @@
                 will appear here.
               </p>
               <div class="chain-pills" aria-label="Supported networks">
-                <span>BTC</span><span>ETH</span><span>SOL</span><span>ZEC</span>
+                <span
+                  ><svg
+                    class="chain-icon"
+                    viewBox="0 0 32 32"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm7.189-17.98c.314-2.096-1.283-3.223-3.465-3.975l.708-2.84-1.728-.43-.69 2.765c-.454-.114-.92-.22-1.385-.326l.695-2.783L15.596 6l-.708 2.839c-.376-.086-.746-.17-1.104-.26l.002-.009-2.384-.595-.46 1.846s1.283.294 1.256.312c.7.175.826.638.805 1.006l-.806 3.235c.048.012.11.03.18.057l-.183-.045-1.13 4.532c-.086.212-.303.531-.793.41.018.025-1.256-.313-1.256-.313l-.858 1.978 2.25.561c.418.105.828.215 1.231.318l-.715 2.872 1.727.43.708-2.84c.472.127.93.245 1.378.357l-.706 2.828 1.728.43.715-2.866c2.948.558 5.164.333 6.097-2.333.752-2.146-.037-3.385-1.588-4.192 1.13-.26 1.98-1.003 2.207-2.538zm-3.95 5.538c-.533 2.147-4.148.986-5.32.695l.95-3.805c1.172.293 4.929.872 4.37 3.11zm.535-5.569c-.487 1.953-3.495.96-4.47.717l.86-3.45c.975.243 4.118.696 3.61 2.733z"
+                    /></svg
+                  ><span>Bitcoin</span></span
+                >
+                <span
+                  ><svg
+                    class="chain-icon"
+                    viewBox="0 0 32 32"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <g fill-rule="evenodd">
+                      <path
+                        d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm7.994-15.781L16.498 4 9 16.22l7.498 4.353 7.496-4.354zM24 17.616l-7.502 4.351L9 17.617l7.498 10.378L24 17.616z"
+                      />
+                      <g fill-rule="nonzero">
+                        <path
+                          fill-opacity=".298"
+                          d="M16.498 4v8.87l7.497 3.35zm0 17.968v6.027L24 17.616z"
+                        />
+                        <path fill-opacity=".801" d="M16.498 20.573l7.497-4.353-7.497-3.348z" />
+                        <path fill-opacity=".298" d="M9 16.22l7.498 4.353v-7.701z" />
+                      </g>
+                    </g></svg
+                  ><span>Ethereum</span></span
+                >
+                <span
+                  ><svg
+                    class="chain-icon"
+                    viewBox="0 0 32 32"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      d="M16 0c8.837 0 16 7.163 16 16s-7.163 16-16 16S0 24.837 0 16 7.163 0 16 0zm8.706 19.517H10.34a.59.59 0 00-.415.17l-2.838 2.815a.291.291 0 00.207.498H21.66a.59.59 0 00.415-.17l2.838-2.816a.291.291 0 00-.207-.497zm-3.046-5.292H7.294l-.068.007a.291.291 0 00-.14.49l2.84 2.816.07.06c.1.07.22.11.344.11h14.366l.068-.007a.291.291 0 00.14-.49l-2.84-2.816-.07-.06a.59.59 0 00-.344-.11zM24.706 9H10.34a.59.59 0 00-.415.17l-2.838 2.816a.291.291 0 00.207.497H21.66a.59.59 0 00.415-.17l2.838-2.815A.291.291 0 0024.706 9z"
+                    /></svg
+                  ><span>Solana</span></span
+                >
+                <span
+                  ><svg
+                    class="chain-icon"
+                    viewBox="0 0 32 32"
+                    fill="currentColor"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm-.904-12.154a37.083 37.083 0 001.518-1.778 462.138 462.138 0 003.714-4.58c.387-.48.968-.958 1.065-1.505.194-1.026.065-2.12.065-3.248H17.55V6h-3.132v2.803h-3.585v3.35h6.039c-.55.65-1.033 1.197-1.518 1.779a462.137 462.137 0 00-3.714 4.58c-.355.48-.936.958-1.033 1.505-.194 1.026-.065 2.12-.065 3.214h3.876V26h3.261c-.064-.957-.097-1.846-.161-2.803h3.875v-3.35h-6.297z"
+                    /></svg
+                  ><span>Zcash</span></span
+                >
               </div>
             </div>
 
@@ -337,7 +412,10 @@
                 </li>
                 <li data-stage="addresses" data-state="upcoming">
                   <span class="stage-marker">3</span>
-                  <div><strong>Recovery outputs</strong><small>12 words · 4 networks</small></div>
+                  <div>
+                    <strong>Recovery outputs</strong
+                    ><small id="progress-output-meta">12 words · 4 networks</small>
+                  </div>
                   <span class="stage-status">Waiting</span>
                 </li>
               </ol>
@@ -364,7 +442,9 @@
                 </div>
               </div>
               <ol id="mnemonic-grid" class="mnemonic-grid" aria-label="Recovery phrase hidden"></ol>
-              <p class="phrase-note">These twelve words control the wallet. Keep them private.</p>
+              <p id="phrase-note" class="phrase-note">
+                These twelve words control the wallet. Keep them private.
+              </p>
 
               <div class="address-section">
                 <div class="address-heading">
@@ -665,7 +745,7 @@
                 </p>
                 <p>
                   Choose a preset or custom path above the address list. Changing the path keeps
-                  your twelve words unchanged. Keep the chosen path and address type for recovery;
+                  your recovery words unchanged. Keep the chosen path and address type for recovery;
                   another wallet must use the same settings to show matching addresses.
                 </p>
                 <p>
@@ -681,19 +761,21 @@
               </summary>
               <div class="doc-content">
                 <p>
-                  BrainBIP combines Argon2id with PBKDF2-SHA256 before generating twelve BIP39
-                  words. Argon2id uses 512 MiB of memory, 16 passes, and 1 lane; PBKDF2-SHA256 uses
-                  5,242,880 iterations. Parameters are never reduced automatically on slower
-                  devices.
+                  BrainBIP combines Argon2id with PBKDF2-SHA256 before generating twelve or
+                  twenty-four BIP39 words. Both wallets come from one derivation. Argon2id uses 512
+                  MiB of memory, 16 passes, and 1 lane; PBKDF2-SHA256 uses 5,242,880 iterations.
+                  Parameters are never reduced automatically on slower devices.
                 </p>
                 <p>
                   The elapsed clock measures time; stage completion follows the actual computation.
                   Animation within a stage does not measure its progress.
                 </p>
                 <p>
-                  Keep a verified offline copy of BrainBIP for recovery. Twelve output words have a
-                  128-bit entropy capacity; they do not prove 128 bits of input strength. The source
-                  includes the full derivation specification and public test vectors.
+                  Keep a verified offline copy of BrainBIP for recovery. Twelve words have a 128-bit
+                  capacity; twenty-four have a 256-bit capacity. More output words do not increase
+                  the strength of your inputs. Each word count creates a different wallet, so
+                  recover with the same count. The source includes the full derivation specification
+                  and public test vectors.
                 </p>
                 <a
                   class="doc-source-link"

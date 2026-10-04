@@ -1,8 +1,8 @@
 # BrainBIP derivation and recovery specification
 
-This document specifies BrainBIP's single fixed mapping from a passphrase and optional email salt to twelve English BIP39 words, followed by selectable mainnet address mappings for Bitcoin, Ethereum, Solana, and Zcash. The same normalized inputs reproduce the same words; the same words, path, and address type reproduce the same address list. Cost parameters never adapt to the device, available memory, or execution time.
+This document specifies BrainBIP's single fixed computation from a passphrase and optional email salt to a 32-byte value, its **12- and 24-word English BIP39 mappings**, and selectable mainnet address mappings for Bitcoin, Ethereum, Solana, and Zcash. The same normalized inputs and word count reproduce the same phrase; the same phrase, path, and address type reproduce the same address list. Cost parameters never adapt to the device, available memory, or execution time.
 
-BrainBIP is a custom brain-wallet construction. Its output follows BIP39, but its passphrase-to-entropy construction is not BIP39, WarpWallet, or a standardized recovery scheme. A valid 12-word output does not establish 128 bits of security: resistance to guessing depends on the original inputs. A salt prevents shared precomputation; an email address is not assumed to be secret or unpredictable. This application and construction have not received an independent security audit.
+BrainBIP is a custom brain-wallet construction. Its output follows BIP39, but its passphrase-to-entropy construction is not BIP39, WarpWallet, or a standardized recovery scheme. Valid 12- or 24-word output does not establish 128 or 256 bits of security: resistance to guessing depends on the original inputs. A salt prevents shared precomputation; an email address is not assumed to be secret or unpredictable. This application and construction have not received an independent security audit.
 
 ## 1. Normalize and encode the inputs
 
@@ -52,13 +52,22 @@ The shipped implementation uses pinned hash-wasm Argon2id and PBKDF2/SHA256 code
 
 The costs were tuned toward approximately ten seconds on a reference machine. That target is not a duration guarantee or a measure of an attacker's cost. The interface shows elapsed time and actual stage transitions; the bundled Argon2 API has no intermediate progress callback and does not supply a completion percentage.
 
-## 3. Produce the mnemonic and BIP39 seed
+## 3. Produce both mnemonics and their BIP39 seeds
 
-For byte positions `j = 0…31`, compute `C[j] = A[j] XOR B[j]`. Use exactly `C[0…15]`, the **first 16 bytes**, as BIP39 entropy. Discard the remaining 16 bytes. Do not hex-encode either value before XOR, reverse byte order, or combine the values by concatenation.
+For byte positions `j = 0…31`, compute `C[j] = A[j] XOR B[j]`. Compute the two KDF branches and this XOR **once per generation**, independently of the selected word count. Do not hex-encode either value before XOR, reverse byte order, or combine the values by concatenation.
 
-Convert the 128 entropy bits to **12 words from the standard BIP39 English wordlist**. BIP39 appends the first four bits of SHA256(entropy) as its checksum, splits the resulting 132 bits into twelve 11-bit indexes, and selects the corresponding words in wordlist order.
+Use the following bytes as entropy for each phrase:
 
-Derive the 64-byte BIP39 seed from the canonical mnemonic with the **BIP39 additional passphrase fixed to the empty string**:
+| Word count  | Entropy bytes             | Entropy bits | SHA256 checksum bits | Total encoded bits |
+| ----------- | ------------------------- | ------------ | -------------------- | ------------------ |
+| 12, default | `C[0…15]`, first 16 bytes | 128          | 4                    | 132                |
+| 24          | `C[0…31]`, all 32 bytes   | 256          | 8                    | 264                |
+
+For **each entropy array separately**, append the first `entropyBits / 32` bits of SHA256(entropy). Split the resulting bits into 11-bit indexes and select words from the standard BIP39 English wordlist. The 12-word checksum is computed from the first 16 bytes; the 24-word checksum is computed from all 32 bytes. Never obtain the 12-word phrase by truncating the 24-word phrase.
+
+Both outputs are related: decoding the 24-word entropy and taking its first 16 bytes reproduces the 12-word entropy. They are not independent secrets. The larger encoding capacity does not add unpredictability to the original inputs, and the displayed strength estimate remains capped at 128 for both choices.
+
+Derive a separate 64-byte BIP39 seed from **each canonical mnemonic**, with the **BIP39 additional passphrase fixed to the empty string**:
 
 ```
 seed = PBKDF2-HMAC-SHA512(
@@ -69,13 +78,15 @@ seed = PBKDF2-HMAC-SHA512(
 )
 ```
 
-The input brain-wallet passphrase is already used in step 2; it is not entered again as a BIP39 additional passphrase. The generated 12 words therefore reproduce the specified HD keys when the wallet implements the exact chain mapping. The email is unnecessary when restoring from the generated words.
+The two mnemonic strings produce different BIP39 seeds and receiving addresses, even with the same selected paths. **Word count is a recovery condition.** The input brain-wallet passphrase is already used in step 2; it is not entered again as a BIP39 additional passphrase. The complete selected phrase reproduces the specified HD keys when the wallet implements the exact chain mapping. The email is unnecessary when restoring from the generated words.
 
-The `deriveAddresses` and `deriveChainAddresses` APIs accept twelve valid English BIP39 words and canonicalize surrounding/separating whitespace before deriving this seed. They do not lowercase words or accept a different BIP39 passphrase.
+`deriveWallet(passphrase, email, onStage)` prepares both phrases and their eighty default addresses, returning `{ profile, wallets: { 12: { mnemonic, addresses }, 24: { mnemonic, addresses } } }`. The `deriveAddresses` and `deriveChainAddresses` APIs accept **12 or 24 valid English BIP39 words**, canonicalize surrounding/separating whitespace, and derive the seed for that complete phrase. They reject other word counts, do not lowercase words, and do not accept a different BIP39 passphrase.
+
+The UI defaults to 12 words and allows choosing either length before or after generation. A word-count change uses the prepared result without repeating the KDF. It hides the phrase, clears any pending address job and clipboard feedback, and restores default address path selections while keeping the active chain. Reset clears both prepared results.
 
 ## 4. Derive mainnet addresses
 
-The application derives indexes **0 through 19**, displayed as positions 1 through 20. Each output contains its zero-based `index`, complete `path`, and public `address`. Apostrophes indicate hardened derivation. The initial lists retain these default mappings:
+For each phrase, the application derives indexes **0 through 19**, displayed as positions 1 through 20. Each output contains its zero-based `index`, complete `path`, and public `address`. Apostrophes indicate hardened derivation. Both word counts use these default path templates, with different seeds and resulting addresses:
 
 | Network         | Curve and key derivation | Default path for index `i` | Address                                      |
 | --------------- | ------------------------ | -------------------------- | -------------------------------------------- |
@@ -84,7 +95,7 @@ The application derives indexes **0 through 19**, displayed as positions 1 throu
 | Solana          | Ed25519, SLIP-0010       | `m/44'/501'/i'/0'`         | Base58 of the raw 32-byte Ed25519 public key |
 | Zcash mainnet   | secp256k1, BIP32/BIP44   | `m/44'/133'/0'/0/i`        | Transparent P2PKH `t1…`                      |
 
-With the defaults, BTC, ETH, and ZEC increment the final **address index within account 0**. SOL increments a **hardened account index**. These are twenty addresses per network, eighty in total, rather than twenty BIP44 accounts on every network.
+With the defaults, BTC, ETH, and ZEC increment the final **address index within account 0**. SOL increments a **hardened account index**. These are twenty addresses per network, eighty per phrase, rather than twenty BIP44 accounts on every network.
 
 ### Presets
 
@@ -129,17 +140,19 @@ Changing an address selection does not alter the mnemonic or rerun the passphras
 
 The default BTC/ETH/SOL paths match Phantom's documented `bip44Change` grouping. Default ETH also matches MetaMask's ordinary recovery-phrase derivation and MEW's standard layout. MetaMask's recovery-phrase importer supports only its standard path; its Ledger alternatives are available when connecting Ledger hardware, not as arbitrary recovery-phrase import choices. See [MetaMask's import limitations](https://support.metamask.io/configure/wallet/importing-a-seed-phrase-from-another-wallet-software-derivation-path/) and [MEW's path selection](https://help.myetherwallet.com/en/articles/5867305-hd-wallets-and-derivation-paths).
 
-Keep the **complete path and address type used for each address**. A receiving wallet must support the relevant chain, address type, and path; a BIP39 import alone does not guarantee discovery. Custom paths may be valid here yet unsupported by another wallet. Address discovery limits and unused-address gaps can require an explicit path or index. Phantom documents activity-dependent discovery for alternate groupings, so unused addresses may not appear automatically.
+Keep the **word count, complete path, and address type used for each address**. A receiving wallet must support that complete BIP39 phrase and the relevant chain, address type, and path; a BIP39 import alone does not guarantee discovery. Custom paths may be valid here yet unsupported by another wallet. Address discovery limits and unused-address gaps can require an explicit path or index. Phantom documents activity-dependent discovery for alternate groupings, so unused addresses may not appear automatically.
 
 For the defaults, restore BTC account 0 with BIP84 Native SegWit; ETH with the standard BIP44 layout; and SOL with the explicit four-level hardened path. ZEC restoration requires a wallet supporting BIP39/BIP44 transparent keys at the stated path; shielded-only restoration is a different scheme. Alternate presets require their respective complete paths and Bitcoin encodings.
 
 The private-email UI switch is **off by default and affects strength estimates only**. Both positions use identical normalization, email salt, KDF parameters, mnemonic, and addresses. Public-email strength credit is zero; any private-email credit is conditional on the user's unverified secrecy and independence assumption.
 
-Recovering the words from the original passphrase and email requires this exact fixed input mapping. Keep a copy of this public specification or the verified offline release; neither is a secret. A memory-limited device must use a device capable of running the fixed derivation. Recovery of receiving addresses from the words also requires the selected chain mapping and address type. A path is public metadata, not an additional secret.
+Recovering the selected phrase from the original passphrase and email requires this exact fixed input mapping and the same word count. Keep a copy of this public specification or the verified offline release; neither is a secret. A memory-limited device must use a device capable of running the fixed derivation. Recovery of receiving addresses from the words also requires the selected chain mapping and address type. Word count and path are recovery metadata, not additional secrets.
 
 ## 6. Test vectors and execution lifecycle
 
 `tests/fixtures/brainbip-v2.json` is a **public, full-cost test vector** including raw and normalized inputs, salts, intermediate outputs, mnemonic, BIP39 seed, and eighty default BTC/ETH/SOL/ZEC addresses. Its fixed inputs and outputs are unchanged by address preset support. **Never deposit funds to addresses derived from test vectors.** Its Argon2 output was generated with the independent noble-hashes JavaScript implementation. PBKDF2, BIP39 seed, and HD/address references use Node/OpenSSL and separate encoders. The production tests compare the complete Argon2 output and end-to-end wallet against this reference.
+
+`tests/fixtures/brainbip-24.json` records the 24-word mapping from the same independently verified KDF outputs. A separate BIP39 checksum encoder converts the full 32 XOR bytes to 24 words, and Node/OpenSSL references derive the BIP39 seed and eighty default addresses. Producing this fixture does not require another heavy KDF run. Published Trezor BIP39 vectors check both word counts; their recorded seeds use the additional passphrase `TREZOR`, while BrainBIP uses an empty additional passphrase.
 
 `tests/fixtures/address-presets.json` contains **thirteen public vectors with twenty rows each**: all nine presets and one custom path per chain. Its 260 addresses come from the separate Node/OpenSSL BIP39, BIP32, SLIP-0010, Base58Check, Bech32, and P2SH-P2WPKH reference encoders, with hash-wasm Keccak for Ethereum. The generator does not import production derivation or preset code. Production tests compare every complete path and address against these references.
 

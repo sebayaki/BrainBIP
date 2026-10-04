@@ -149,7 +149,7 @@ function startDerivation(event) {
             recovery.show(data.result, progress.elapsedSeconds().toFixed(1));
             setBusy(false);
             announce(
-              'Recovery phrase ready. Twelve words and twenty receiving addresses per chain have been generated. The recovery phrase is hidden.',
+              `Recovery phrase ready. ${recovery.getWordCount()} words and twenty receiving addresses per chain have been generated. The recovery phrase is hidden.`,
             );
           }
           if (data.type === 'error') {
@@ -201,6 +201,7 @@ function resetAll({ focus = true, announceReset = true } = {}) {
   $('toggle-password').setAttribute('aria-label', 'Show passphrase');
   $('toggle-password').setAttribute('aria-pressed', 'false');
   recovery.resetChain();
+  recovery.resetWordCount();
   setBusy(false);
   setStage(null);
   if (announceReset)

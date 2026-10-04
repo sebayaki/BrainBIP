@@ -147,11 +147,11 @@ export function estimateStrength(passphrase, email = '', privateEmail = false) {
   feedback.push(LIMITED_LANGUAGE);
   if (passphraseBits + emailBits >= OUTPUT_BITS) {
     feedback.push(
-      'The combined estimate is capped at the 128-bit limit of the twelve-word output.',
+      'The displayed estimate is conservatively capped at 128 bits for both word counts.',
     );
   }
   feedback.push(
-    'Estimated guesswork is not measured entropy or a security guarantee. Twelve output words do not strengthen predictable inputs.',
+    'Estimated guesswork is not measured entropy or a security guarantee. More recovery words do not strengthen predictable inputs.',
   );
   return {
     passphraseBits,

@@ -1,10 +1,25 @@
 # Changelog
 
-Application versions describe the interface, packaging, and supported features. The application uses one fixed input-to-mnemonic algorithm.
+Application versions describe the interface, packaging, and supported features. The application uses one fixed passphrase-stretching algorithm.
 
 ## [Unreleased]
 
 No changes yet.
+
+## [0.4.0] - 2026-10-04
+
+### Added
+
+- A 12- or 24-word BIP39 choice before and after generation, with 12 words selected by default.
+- Both phrases and their eighty default addresses from one Argon2id/PBKDF2 computation: 12 words use the first 16 XOR bytes, and 24 words use all 32 bytes.
+- Independent 24-word BIP39 and address reference fixtures.
+- SVG icons and full network names in the initial chain pills as well as the result tabs.
+
+### Changed
+
+- Switching word count hides the recovery phrase and restores default address selections without rerunning the heavy computation.
+- Clarified that word count is a recovery condition and selects a different wallet; the two phrases are related outputs, and 24 words do not increase input entropy.
+- Kept the displayed strength estimate capped at 128 for both word counts. Selecting 24 words does not raise the estimate.
 
 ## [0.3.0] - 2026-10-04
 
@@ -51,6 +66,7 @@ The first tagged release includes a self-contained offline app for twelve-word r
 - Monero support, keeping all four supported networks on one consistent twelve-word BIP39 recovery phrase.
 - Derivation version selection and backward compatibility, leaving one fixed strengthened algorithm.
 
-[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sebayaki/BrainBIP/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sebayaki/BrainBIP/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sebayaki/BrainBIP/releases/tag/v0.2.0

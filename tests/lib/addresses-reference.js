@@ -123,10 +123,13 @@ function referenceBech32(hashBytes) {
 
 export function referenceMnemonic(entropy) {
   const bitString = [...entropy].map((byte) => byte.toString(2).padStart(8, '0')).join('');
-  const checksum = sha256(entropy)[0].toString(2).padStart(8, '0').slice(0, 4);
+  const checksum = [...sha256(entropy)]
+    .map((byte) => byte.toString(2).padStart(8, '0'))
+    .join('')
+    .slice(0, bitString.length / 32);
   const combined = bitString + checksum;
   return Array.from(
-    { length: 12 },
+    { length: combined.length / 11 },
     (_, index) => wordlist[Number.parseInt(combined.slice(index * 11, index * 11 + 11), 2)],
   ).join(' ');
 }

@@ -5,8 +5,9 @@ export const PROFILE = Object.freeze({
   maxPassphraseCharacters: 1024,
   maxEmailCharacters: 320,
   addressCount: 20,
-  entropyBytes: 16,
-  mnemonicWords: 12,
+  defaultWordCount: 12,
+  supportedWordCounts: Object.freeze([12, 24]),
+  entropyBytesByWordCount: Object.freeze({ 12: 16, 24: 32 }),
   bip39Passphrase: '',
   paths: Object.freeze({
     btc: "m/84'/0'/0'/0/{index}",

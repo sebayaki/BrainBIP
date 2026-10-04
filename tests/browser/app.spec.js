@@ -8,6 +8,9 @@ const fixture = JSON.parse(
 const pathFixture = JSON.parse(
   await readFile(new URL('../fixtures/address-presets.json', import.meta.url), 'utf8'),
 );
+const fixture24 = JSON.parse(
+  await readFile(new URL('../fixtures/brainbip-24.json', import.meta.url), 'utf8'),
+);
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
 
@@ -22,7 +25,7 @@ async function generate(page) {
   await expect(page.locator('#mnemonic-grid li')).toHaveCount(12);
 }
 
-async function assertAllAddresses(page) {
+async function assertAllAddresses(page, expected = fixture) {
   await expect(page.locator('#chain-tabs button')).toHaveText([
     'Bitcoin',
     'Ethereum',
@@ -31,7 +34,7 @@ async function assertAllAddresses(page) {
   ]);
   await expect(page.locator('#chain-tabs svg[aria-hidden="true"]')).toHaveCount(4);
   for (const chain of ['btc', 'eth', 'sol', 'zec']) {
-    const rows = fixture.addresses[chain];
+    const rows = expected.addresses[chain];
     await page.locator(`#tab-${chain}`).click();
     await expect(page.locator('#address-list tr')).toHaveCount(20);
     await expect(page.locator('.address-text')).toHaveText(rows.map((entry) => entry.address));
@@ -442,7 +445,9 @@ test('path presets and custom paths update addresses without deriving new recove
   await expect(page.locator('#custom-path')).toHaveValue('');
 });
 
-test('a superseded or reset address job cannot restore stale addresses', async ({ page }) => {
+test('superseded, word-count-switched, and reset jobs cannot restore stale addresses', async ({
+  page,
+}) => {
   await page.addInitScript((rows) => {
     const NativeWorker = window.Worker;
     window.testAddressReplies = [];
@@ -471,10 +476,84 @@ test('a superseded or reset address job cannot restore stale addresses', async (
   await page.evaluate(() => window.testAddressReplies[0]());
   await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'true');
   await expect(page.locator('#address-list tr')).toHaveCount(0);
-  await page.locator('#reset-button').click();
+  await page.locator('#word-count-24').click();
   await page.evaluate(() => window.testAddressReplies[1]());
+  await expect(page.locator('.address-text')).toHaveText(
+    fixture24.addresses.eth.map((row) => row.address),
+  );
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(24);
+  await page.locator('#derivation-select').selectOption('ledger-live');
+  await expect.poll(() => page.evaluate(() => window.testAddressReplies.length)).toBe(3);
+  await page.locator('#reset-button').click();
+  await page.evaluate(() => window.testAddressReplies[2]());
   await expect(page.locator('#result-state')).toBeHidden();
   await expect(page.locator('#address-list tr')).toHaveCount(0);
   await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
   await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'false');
+});
+
+test('word-count selection switches complete wallets without repeating the KDF', async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.testWalletJobs = 0;
+    window.testCopies = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: async (value) => window.testCopies.push(value) },
+      configurable: true,
+    });
+    window.Worker = class extends NativeWorker {
+      postMessage(data, ...rest) {
+        if ('passphrase' in data && !('privateEmail' in data)) window.testWalletJobs += 1;
+        return super.postMessage(data, ...rest);
+      }
+    };
+  });
+  await page.goto('/');
+  await expect(page.locator('#word-count-12')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#word-count-24').click();
+  await enterFixture(page);
+  await expect(page.locator('#word-count-24')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#result-state')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(24);
+  await expect(page.locator('#mnemonic-grid .word-value').first()).toHaveText('••••••');
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(
+    fixture24.mnemonic.split(' '),
+  );
+  await assertAllAddresses(page, fixture24);
+  await page.locator('#copy-phrase').click();
+  await page.locator('.copy-address').first().click();
+  await expect
+    .poll(() => page.evaluate(() => window.testCopies))
+    .toEqual([fixture24.mnemonic, fixture24.addresses.zec[0].address]);
+  const estimatedBits = await page.locator('#strength-bits').textContent();
+  await page.locator('#word-count-12').click();
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(12);
+  await expect(page.locator('#mnemonic-grid .word-value').first()).toHaveText('••••••');
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await assertAllAddresses(page);
+  await page.locator('#tab-eth').click();
+  await page.locator('#derivation-select').selectOption('ledger-live');
+  await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('.address-path').nth(1)).toHaveText("m/44'/60'/1'/0/0");
+  await page.locator('#word-count-24').click();
+  await expect(page.locator('#derivation-select')).toHaveValue('standard');
+  await expect(page.locator('#tab-eth')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.address-text')).toHaveText(
+    fixture24.addresses.eth.map((row) => row.address),
+  );
+  await expect(page.locator('#strength-bits')).toHaveText(estimatedBits);
+  expect(await page.evaluate(() => window.testWalletJobs)).toBe(1);
+  await page.locator('#toggle-phrase').click();
+  await page
+    .locator('#output-panel')
+    .screenshot({ path: testInfo.outputPath('desktop-24-words.png') });
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#word-count-12')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
 });
