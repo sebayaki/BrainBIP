@@ -57,7 +57,8 @@ function checkedSpendKey(spendKey) {
     throw new TypeError('Monero spend key must be 32 bytes.');
   }
   const scalar = numberLE(spendKey);
-  if (scalar <= 0n || scalar >= scalarOrder) throw new Error('Monero spend key must be a canonical nonzero scalar.');
+  if (scalar <= 0n || scalar >= scalarOrder)
+    throw new Error('Monero spend key must be a canonical nonzero scalar.');
   return scalar;
 }
 
@@ -66,7 +67,7 @@ function crc32(bytes) {
   for (const byte of bytes) {
     crc ^= byte;
     for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
     }
   }
   return (crc ^ 0xffffffff) >>> 0;
@@ -133,7 +134,8 @@ export function moneroAddressesFromSpendKey(spendKey, count = MONERO_PROFILE.add
         const material = concatBytes(subaddressDomain, viewBytes, indices);
         try {
           const tweak = hashScalar(material);
-          const tweakPublic = tweak === 0n ? ed25519.Point.ZERO : ed25519.Point.BASE.multiply(tweak);
+          const tweakPublic =
+            tweak === 0n ? ed25519.Point.ZERO : ed25519.Point.BASE.multiply(tweak);
           const subSpendPublic = spendPublic.add(tweakPublic);
           const subViewPublic = subSpendPublic.multiply(view);
           address = addressFor(subSpendPublic, subViewPublic, MONERO_PROFILE.subaddressPrefix);
@@ -142,7 +144,13 @@ export function moneroAddressesFromSpendKey(spendKey, count = MONERO_PROFILE.add
           indices.fill(0);
         }
       }
-      addresses.push({ index, path: MONERO_PROFILE.path, address, account: MONERO_PROFILE.account, subaddress: index });
+      addresses.push({
+        index,
+        path: MONERO_PROFILE.path,
+        address,
+        account: MONERO_PROFILE.account,
+        subaddress: index,
+      });
     }
     return addresses;
   } finally {

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security model and reporting
+    url: https://github.com/sebayaki/BrainBIP/blob/main/docs/security.md
+    about: Read this before sharing security-sensitive information.

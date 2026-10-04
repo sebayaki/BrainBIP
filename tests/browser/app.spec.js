@@ -2,8 +2,12 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-const fixture = JSON.parse(await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'));
-const moneroFixture = JSON.parse(await readFile(new URL('../fixtures/monero-ledger-v1.json', import.meta.url), 'utf8')).vectors.find((vector) => vector.id === 'brainbip-v1-public');
+const fixture = JSON.parse(
+  await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'),
+);
+const moneroFixture = JSON.parse(
+  await readFile(new URL('../fixtures/monero-ledger-v1.json', import.meta.url), 'utf8'),
+).vectors.find((vector) => vector.id === 'brainbip-v1-public');
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
 
@@ -28,15 +32,25 @@ async function assertAllAddresses(page) {
   }
 }
 
-test('hosted edition computes the full profile offline, shows all addresses, and clears secrets', async ({ page, context }, testInfo) => {
+test('hosted edition computes the full profile offline, shows all addresses, and clears secrets', async ({
+  page,
+  context,
+}, testInfo) => {
   const errors = [];
   const requests = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  page.on('request', (request) => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('request', (request) => {
+    if (/^https?:/.test(request.url())) requests.push(request.url());
+  });
   await page.addInitScript(() => {
     window.testCopies = [];
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (value) => window.testCopies.push(value) }, configurable: true });
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: async (value) => window.testCopies.push(value) },
+      configurable: true,
+    });
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
@@ -55,7 +69,9 @@ test('hosted edition computes the full profile offline, shows all addresses, and
   await expect(page.locator('#tab-eth')).toHaveAttribute('aria-selected', 'true');
   await page.locator('#copy-phrase').click();
   await page.locator('.copy-address').first().click();
-  await expect.poll(() => page.evaluate(() => window.testCopies)).toEqual([fixture.mnemonic, fixture.addresses.eth[0].address]);
+  await expect
+    .poll(() => page.evaluate(() => window.testCopies))
+    .toEqual([fixture.mnemonic, fixture.addresses.eth[0].address]);
   await page.screenshot({ path: testInfo.outputPath('desktop-result.png'), fullPage: true });
   await page.locator('#toggle-phrase').click();
   await expect(page.locator('#mnemonic-grid .word-value').first()).toHaveText('••••••');
@@ -67,18 +83,27 @@ test('hosted edition computes the full profile offline, shows all addresses, and
   await expect(page.locator('#passphrase')).toHaveValue('');
   await expect(page.locator('#email')).toHaveValue('');
   await expect(page.locator('#generate-button')).toBeDisabled();
-  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual([0, 0, '']);
+  expect(
+    await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie]),
+  ).toEqual([0, 0, '']);
   expect(await page.evaluate(async () => (await indexedDB.databases()).length)).toBe(0);
   expect(requests).toEqual(['http://127.0.0.1:4173/']);
   expect(errors).toEqual([]);
 });
 
-test('single file runs without a server or network at a mobile viewport', async ({ page, context }, testInfo) => {
+test('single file runs without a server or network at a mobile viewport', async ({
+  page,
+  context,
+}, testInfo) => {
   const networkRequests = [];
   const errors = [];
-  page.on('request', (request) => { if (/^https?:/.test(request.url())) networkRequests.push(request.url()); });
+  page.on('request', (request) => {
+    if (/^https?:/.test(request.url())) networkRequests.push(request.url());
+  });
   page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
   await context.setOffline(true);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(offlineURL);
@@ -90,9 +115,13 @@ test('single file runs without a server or network at a mobile viewport', async 
   await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
   await assertAllAddresses(page);
   await page.screenshot({ path: testInfo.outputPath('mobile-result.png'), fullPage: true });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
   await page.setViewportSize({ width: 320, height: 740 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
   await page.screenshot({ path: testInfo.outputPath('mobile-narrow.png'), fullPage: true });
   expect(networkRequests).toEqual([]);
   expect(errors).toEqual([]);
@@ -133,7 +162,13 @@ test('offline download contains pristine build bytes, never the current form', a
 });
 
 test('unsupported workers fail visibly instead of weakening the derivation', async ({ page }) => {
-  await page.addInitScript(() => { window.Worker = class { constructor() { throw new Error('Unsupported'); } }; });
+  await page.addInitScript(() => {
+    window.Worker = class {
+      constructor() {
+        throw new Error('Unsupported');
+      }
+    };
+  });
   await page.goto('/');
   await enterFixture(page);
   await page.locator('#generate-button').click();
@@ -146,10 +181,19 @@ test('unsupported workers fail visibly instead of weakening the derivation', asy
 test('a deferred clipboard rejection cannot reintroduce a cleared phrase', async ({ page }) => {
   await page.addInitScript(() => {
     window.fallbackCopies = 0;
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
-      writeText: () => new Promise((resolve, reject) => { window.rejectTestCopy = reject; }),
-    } });
-    document.execCommand = () => { window.fallbackCopies += 1; return true; };
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () =>
+          new Promise((resolve, reject) => {
+            window.rejectTestCopy = reject;
+          }),
+      },
+    });
+    document.execCommand = () => {
+      window.fallbackCopies += 1;
+      return true;
+    };
   });
   await page.goto('/');
   await enterFixture(page);
@@ -171,8 +215,12 @@ test('leaving the page clears state before a back-forward cache restore', async 
   await page.goto('/');
   await enterFixture(page);
   await page.locator('#generate-button').click();
-  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
-  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+  await page.evaluate(() =>
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })),
+  );
+  await page.evaluate(() =>
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })),
+  );
   await expect(page.locator('#passphrase')).toHaveValue('');
   await expect(page.locator('#email')).toHaveValue('');
   await expect(page.locator('#progress-state')).toBeHidden();
@@ -182,7 +230,9 @@ test('leaving the page clears state before a back-forward cache restore', async 
   await expect(page.locator('#generate-button')).toBeEnabled();
 });
 
-test('long input is rejected explicitly instead of silently truncated into another wallet', async ({ page }) => {
+test('long input is rejected explicitly instead of silently truncated into another wallet', async ({
+  page,
+}) => {
   await page.goto('/');
   const tooLong = 'x'.repeat(1025);
   await page.locator('#passphrase').fill(tooLong);
@@ -206,7 +256,9 @@ test('private email is opt-in, updates only the estimate, and resets off', async
   const baseBits = Number(await page.locator('#strength-bits').textContent());
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
-  await expect.poll(async () => Number(await page.locator('#strength-bits').textContent())).toBeGreaterThan(baseBits);
+  await expect
+    .poll(async () => Number(await page.locator('#strength-bits').textContent()))
+    .toBeGreaterThan(baseBits);
   await expect(page.locator('#strength-detail')).toContainText('assumed');
   await generate(page);
   await page.locator('#toggle-phrase').click();
@@ -222,7 +274,9 @@ test('private email is opt-in, updates only the estimate, and resets off', async
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
 });
 
-test('Monero recovery is hidden by default and cleared after closing, switching, or reset', async ({ page }) => {
+test('Monero recovery is hidden by default and cleared after closing, switching, or reset', async ({
+  page,
+}) => {
   await page.goto('/');
   await enterFixture(page);
   await generate(page);
@@ -230,7 +284,9 @@ test('Monero recovery is hidden by default and cleared after closing, switching,
   await page.locator('#tab-xmr').click();
   await expect(page.locator('#address-list tr')).toHaveCount(20);
   await expect(page.locator('.address-path-details summary').first()).toHaveText('Primary · 0 / 0');
-  await expect(page.locator('.address-path-details summary').last()).toHaveText('Subaddress · 0 / 19');
+  await expect(page.locator('.address-path-details summary').last()).toHaveText(
+    'Subaddress · 0 / 19',
+  );
   await page.locator('#monero-recovery-details > summary').click();
   const words = page.locator('#monero-mnemonic-grid .word-value');
   await expect(words).toHaveCount(25);
@@ -239,8 +295,14 @@ test('Monero recovery is hidden by default and cleared after closing, switching,
   await expect(words).toHaveText(moneroFixture.recovery.mnemonic.split(' '));
   for (const width of [320, 390, 900, 1081, 1280]) {
     await page.setViewportSize({ width, height: 1000 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const clipped = await page.locator('.word-value, .address-text').evaluateAll((elements) => elements.some((element) => element.scrollWidth > element.clientWidth + 1));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    const clipped = await page
+      .locator('.word-value, .address-text')
+      .evaluateAll((elements) =>
+        elements.some((element) => element.scrollWidth > element.clientWidth + 1),
+      );
     expect(clipped).toBe(false);
   }
   await page.locator('#monero-recovery-details > summary').click();

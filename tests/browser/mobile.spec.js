@@ -1,17 +1,26 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 
-const fixture = JSON.parse(await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'));
+const fixture = JSON.parse(
+  await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'),
+);
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 
-test('mobile WebKit keeps controls readable, zoom available, and the layout inside the viewport', async ({ page }, testInfo) => {
+test('mobile WebKit keeps controls readable, zoom available, and the layout inside the viewport', async ({
+  page,
+}, testInfo) => {
   await page.goto('/');
-  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1');
+  await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+    'content',
+    'width=device-width, initial-scale=1',
+  );
   for (const width of [320, 390, 430, 768]) {
     await page.setViewportSize({ width, height: 844 });
     for (const id of ['passphrase', 'email']) {
       const input = page.locator(`#${id}`);
-      expect(await input.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+      expect(
+        await input.evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
+      ).toBeGreaterThanOrEqual(16);
       await input.focus();
       expect(await page.evaluate(() => window.visualViewport.scale)).toBe(1);
     }
@@ -20,22 +29,35 @@ test('mobile WebKit keeps controls readable, zoom available, and the layout insi
       expect(size.height).toBeGreaterThanOrEqual(44);
       expect(size.width).toBeGreaterThanOrEqual(44);
     }
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('#email').blur();
-  await page.screenshot({ path: testInfo.outputPath('webkit-mobile-empty.png'), fullPage: true, caret: 'initial' });
+  await page.screenshot({
+    path: testInfo.outputPath('webkit-mobile-empty.png'),
+    fullPage: true,
+    caret: 'initial',
+  });
   await expect(page.locator('#strength-feedback')).toBeHidden();
   await page.locator('#docs-strength > summary').click();
   await expect(page.locator('#strength-feedback')).toBeVisible();
 });
 
-test('mobile WebKit derives offline including Monero and renders long addresses without overflow', async ({ page, context }, testInfo) => {
+test('mobile WebKit derives offline including Monero and renders long addresses without overflow', async ({
+  page,
+  context,
+}, testInfo) => {
   const requests = [];
   const errors = [];
-  page.on('request', (request) => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
+  page.on('request', (request) => {
+    if (/^https?:/.test(request.url())) requests.push(request.url());
+  });
   page.on('pageerror', (error) => errors.push(error.message));
-  const collectConsoleError = (message) => { if (message.type() === 'error') errors.push(message.text()); };
+  const collectConsoleError = (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  };
   page.on('console', collectConsoleError);
   // WebKit's simulated offline mode also rejects local blob worker URLs.
   // Block every HTTP(S) request instead, while allowing file/blob/data assets.
@@ -56,8 +78,14 @@ test('mobile WebKit derives offline including Monero and renders long addresses 
   await expect(page.locator('#monero-mnemonic-grid .word-value')).toHaveCount(25);
   for (const width of [320, 390, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const clipped = await page.locator('.word-value, .address-text').evaluateAll((elements) => elements.some((element) => element.scrollWidth > element.clientWidth + 1));
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    const clipped = await page
+      .locator('.word-value, .address-text')
+      .evaluateAll((elements) =>
+        elements.some((element) => element.scrollWidth > element.clientWidth + 1),
+      );
     expect(clipped).toBe(false);
   }
   await page.setViewportSize({ width: 390, height: 844 });
@@ -67,7 +95,11 @@ test('mobile WebKit derives offline including Monero and renders long addresses 
   // policy intact and exclude only console events during this visual capture.
   page.off('console', collectConsoleError);
   try {
-    await page.screenshot({ path: testInfo.outputPath('webkit-mobile-monero.png'), fullPage: true, caret: 'initial' });
+    await page.screenshot({
+      path: testInfo.outputPath('webkit-mobile-monero.png'),
+      fullPage: true,
+      caret: 'initial',
+    });
   } finally {
     page.on('console', collectConsoleError);
   }

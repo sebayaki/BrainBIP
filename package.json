@@ -1,6 +1,6 @@
 {
   "name": "brainbip",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "An offline-first experiment in deterministic wallet recovery.",
   "type": "module",
@@ -9,12 +9,16 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node scripts/build.mjs",
     "dev": "npm run build && node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "check:repo": "node scripts/check-repo.mjs",
     "test": "node --test tests/*.test.js",
     "test:build": "node --test tests/build.test.mjs",
     "test:browser": "playwright test",
-    "check": "npm test && npm run build && npm run test:build"
+    "check": "npm run format:check && npm run lint && npm run check:repo && npm test && npm run build && npm run test:build"
   },
   "dependencies": {
     "@fontsource-variable/instrument-sans": "5.3.0",
@@ -31,7 +35,19 @@
     "micro-key-producer": "0.10.2"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.9"
+  },
+  "homepage": "https://sebayaki.github.io/BrainBIP/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebayaki/BrainBIP.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sebayaki/BrainBIP/issues"
   }
 }

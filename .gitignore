@@ -14,6 +14,7 @@ playwright-report/
 *.p12
 *.pfx
 .local/
+.release/
 .codex/
 .agents/
 AGENTS.md

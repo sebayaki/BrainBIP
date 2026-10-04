@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible interface, build, or compatibility issue.
+body:
+  - type: markdown
+    attributes:
+      value: Use only public example inputs. Never include real passphrases, email salts, recovery phrases, private keys, or screenshots containing them. For a security concern, read the security reporting guidance first.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Application version shown in the footer, or a commit identifier.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Safari on iPhone, Chrome on Linux, or similar
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the expected and actual behavior, using public test data only.
+    validations:
+      required: true

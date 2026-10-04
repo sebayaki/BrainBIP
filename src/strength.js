@@ -1,6 +1,7 @@
 import { ZxcvbnFactory } from '@zxcvbn-ts/core';
 import * as common from '@zxcvbn-ts/language-common';
 import * as english from '@zxcvbn-ts/language-en';
+import { isUnicodeText, normalizeInputText } from './inputs.js';
 
 // This is a guessability model, not an entropy measurement. It has no remote
 // matchers and does not retain per-request userInputs in the shared dictionary.
@@ -16,12 +17,10 @@ export const ESTIMATE_MAX_CHARACTERS = 128;
 const OUTPUT_BITS = 128;
 const PRIVATE_EMAIL_MAX_BITS = 32;
 const LABELS = ['Very low', 'Low', 'Moderate', 'Higher', 'High'];
-const LIMITED_LANGUAGE = 'English dictionaries are used; non-English words and personal references may be easier to guess than this model predicts.';
-const LIMITED_LENGTH = 'Only the first 128 characters are estimated. Wallet generation still uses the complete input.';
-
-function validUnicode(value) {
-  return !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value);
-}
+const LIMITED_LANGUAGE =
+  'English dictionaries are used; non-English words and personal references may be easier to guess than this model predicts.';
+const LIMITED_LENGTH =
+  'Only the first 128 characters are estimated. Wallet generation still uses the complete input.';
 
 function bounded(value) {
   const characters = [...value];
@@ -69,13 +68,13 @@ function scoreFor(bits) {
  * matches, crack-time claims, or estimator internals leave this function.
  */
 export function estimateStrength(passphrase, email = '', privateEmail = false) {
-  if (typeof passphrase !== 'string' || typeof email !== 'string' ||
-      !validUnicode(passphrase) || !validUnicode(email)) {
+  if (!isUnicodeText(passphrase) || !isUnicodeText(email)) {
     throw new TypeError('Strength estimation requires valid text.');
   }
-  // Keep these rules aligned with the immutable wallet recovery profile.
-  const normalizedPassphrase = passphrase.normalize('NFKC');
-  const normalizedEmail = email.normalize('NFKC').trim();
+  const { passphrase: normalizedPassphrase, email: normalizedEmail } = normalizeInputText(
+    passphrase,
+    email,
+  );
   const password = bounded(normalizedPassphrase);
   const emailInput = bounded(normalizedEmail);
   const at = normalizedEmail.lastIndexOf('@');
@@ -99,8 +98,10 @@ export function estimateStrength(passphrase, email = '', privateEmail = false) {
     // Treat recognizable email-related material conservatively in either mode.
     const result = estimator.check(password.value, emailHints);
     passphraseBits = Math.min(OUTPUT_BITS, modelBits(result));
-    passwordUsesAlias = result.sequence.some((match) =>
-      match.dictionaryName?.includes('userInputs') && aliasHintSet.has(match.matchedWord));
+    passwordUsesAlias = result.sequence.some(
+      (match) =>
+        match.dictionaryName?.includes('userInputs') && aliasHintSet.has(match.matchedWord),
+    );
     if (result.feedback.warning) feedback.push(result.feedback.warning);
     feedback.push(...result.feedback.suggestions);
   }
@@ -117,17 +118,23 @@ export function estimateStrength(passphrase, email = '', privateEmail = false) {
     } else if (passwordUsesAlias || related(aliasInput.value, normalizedPassphrase)) {
       emailAssumption = 'No private-email credit: its name overlaps with the passphrase.';
     } else {
-      const conditional = estimator.check(aliasInput.value, [...userInputs(password.value), domain]);
+      const conditional = estimator.check(aliasInput.value, [
+        ...userInputs(password.value),
+        domain,
+      ]);
       const sharesPasswordMaterial = conditional.sequence.some((match) =>
-        match.dictionaryName?.includes('userInputs'));
+        match.dictionaryName?.includes('userInputs'),
+      );
       if (sharesPasswordMaterial) {
-        emailAssumption = 'No private-email credit: its name matches known or passphrase-related information.';
+        emailAssumption =
+          'No private-email credit: its name matches known or passphrase-related information.';
       } else {
         // A small, explicit ceiling is a conservative product policy, not a
         // calibrated security bound. Multiplying guess counts assumes independent
         // unknown inputs, which a text estimator cannot verify.
         emailBits = Math.min(PRIVATE_EMAIL_MAX_BITS, modelBits(conditional));
-        emailAssumption = 'Assumes the email name is unknown and independent. Domain, case and +tags do not count; credit is capped at 32 estimate bits.';
+        emailAssumption =
+          'Assumes the email name is unknown and independent. Domain, case and +tags do not count; credit is capped at 32 estimate bits.';
       }
     }
   }
@@ -139,9 +146,13 @@ export function estimateStrength(passphrase, email = '', privateEmail = false) {
   // flag cannot identify those, so every result carries the coverage caveat.
   feedback.push(LIMITED_LANGUAGE);
   if (passphraseBits + emailBits >= OUTPUT_BITS) {
-    feedback.push('The combined estimate is capped at the 128-bit limit of the twelve-word output.');
+    feedback.push(
+      'The combined estimate is capped at the 128-bit limit of the twelve-word output.',
+    );
   }
-  feedback.push('Estimated guesswork is not measured entropy or a security guarantee. Twelve output words do not strengthen predictable inputs.');
+  feedback.push(
+    'Estimated guesswork is not measured entropy or a security guarantee. Twelve output words do not strengthen predictable inputs.',
+  );
   return {
     passphraseBits,
     score,

@@ -10,6 +10,7 @@ import { HDKey } from '@scure/bip32';
 import { base58, base58check, bech32 } from '@scure/base';
 import Slip10 from 'micro-key-producer/slip10.js';
 import { deriveMoneroWallet, MONERO_PROFILE } from './monero.js';
+import { isUnicodeText, normalizeInputText } from './inputs.js';
 
 export const PROFILE = Object.freeze({
   id: 'brainbip-v1',
@@ -59,25 +60,25 @@ export function safeErrorMessage(error) {
   return 'Wallet generation failed. WebAssembly support and enough available memory are required.';
 }
 
-function validUnicode(value) {
-  // TextEncoder replaces lone surrogates. Reject them so distinct malformed
-  // strings cannot silently acquire the same UTF-8 representation.
-  return !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value);
-}
-
 export function normalizeInputs(passphrase, email = '') {
   if (typeof passphrase !== 'string' || typeof email !== 'string') {
     throw new TypeError('Passphrase and email must be text.');
   }
-  if (!validUnicode(passphrase) || !validUnicode(email)) {
+  if (!isUnicodeText(passphrase) || !isUnicodeText(email)) {
     throw new TypeError('Passphrase and email must contain valid Unicode text.');
   }
-  const normalizedPassphrase = passphrase.normalize('NFKC');
-  const normalizedEmail = email.normalize('NFKC').trim();
+  const { passphrase: normalizedPassphrase, email: normalizedEmail } = normalizeInputText(
+    passphrase,
+    email,
+  );
   if (normalizedPassphrase.length === 0) throw new Error('Enter a passphrase.');
-  if ([...normalizedPassphrase].length > PROFILE.maxPassphraseCharacters ||
-      [...normalizedEmail].length > PROFILE.maxEmailCharacters) {
-    throw new RangeError('Passphrase must contain at most 1024 characters and email at most 320 characters after normalization.');
+  if (
+    [...normalizedPassphrase].length > PROFILE.maxPassphraseCharacters ||
+    [...normalizedEmail].length > PROFILE.maxEmailCharacters
+  ) {
+    throw new RangeError(
+      'Passphrase must contain at most 1024 characters and email at most 320 characters after normalization.',
+    );
   }
   return { passphrase: normalizedPassphrase, email: normalizedEmail };
 }
@@ -87,9 +88,13 @@ function ethAddress(privateKey) {
   const hash = keccak_256(publicKey.subarray(1));
   const lower = bytesToHex(hash.subarray(12));
   const checksum = bytesToHex(keccak_256(encoder.encode(lower)));
-  const address = '0x' + [...lower].map((character, index) =>
-    Number.parseInt(checksum[index], 16) >= 8 ? character.toUpperCase() : character
-  ).join('');
+  const address =
+    '0x' +
+    [...lower]
+      .map((character, index) =>
+        Number.parseInt(checksum[index], 16) >= 8 ? character.toUpperCase() : character,
+      )
+      .join('');
   publicKey.fill(0);
   hash.fill(0);
   return address;
@@ -139,10 +144,13 @@ function deriveWalletMaterial(mnemonic, count = PROFILE.addressCount) {
   if (!Number.isInteger(count) || count < 1 || count > PROFILE.addressCount) {
     throw new RangeError('Address count must be an integer from 1 to 20.');
   }
-  if (typeof mnemonic !== 'string') throw new TypeError('Enter a valid 12-word English BIP39 phrase.');
+  if (typeof mnemonic !== 'string')
+    throw new TypeError('Enter a valid 12-word English BIP39 phrase.');
   const canonicalMnemonic = mnemonic.normalize('NFKD').trim().split(/\s+/u).join(' ');
-  if (canonicalMnemonic.split(' ').length !== PROFILE.mnemonicWords ||
-      !validateMnemonic(canonicalMnemonic, wordlist)) {
+  if (
+    canonicalMnemonic.split(' ').length !== PROFILE.mnemonicWords ||
+    !validateMnemonic(canonicalMnemonic, wordlist)
+  ) {
     throw new Error('Enter a valid 12-word English BIP39 phrase.');
   }
   const seed = mnemonicToSeedSync(canonicalMnemonic, PROFILE.bip39Passphrase);
@@ -159,8 +167,12 @@ function deriveWalletMaterial(mnemonic, count = PROFILE.addressCount) {
         const privateKey = child.privateKey;
         const publicKey = child.publicKey;
         try {
-          const address = chain === 'btc' ? btcAddress(publicKey)
-            : chain === 'eth' ? ethAddress(privateKey) : zecAddress(publicKey);
+          const address =
+            chain === 'btc'
+              ? btcAddress(publicKey)
+              : chain === 'eth'
+                ? ethAddress(privateKey)
+                : zecAddress(publicKey);
           addresses[chain].push({ index, path, address });
         } finally {
           privateKey?.fill(0);
@@ -223,13 +235,23 @@ export async function deriveWallet(passphrase, email = '', onStage = () => {}) {
       outputType: 'binary',
     });
     mixed = new Uint8Array(PROFILE.argon2id.outputBytes);
-    for (let index = 0; index < mixed.length; index += 1) mixed[index] = argonKey[index] ^ pbkdfKey[index];
+    for (let index = 0; index < mixed.length; index += 1)
+      mixed[index] = argonKey[index] ^ pbkdfKey[index];
     entropy = mixed.slice(0, PROFILE.entropyBytes);
     const mnemonic = entropyToMnemonic(entropy, wordlist);
     onStage('addresses');
     return { mnemonic, ...deriveWalletMaterial(mnemonic), profile: PROFILE.id };
   } finally {
-    for (const buffer of [password, emailBytes, argonSalt, pbkdfSalt, argonKey, pbkdfKey, mixed, entropy]) {
+    for (const buffer of [
+      password,
+      emailBytes,
+      argonSalt,
+      pbkdfSalt,
+      argonKey,
+      pbkdfKey,
+      mixed,
+      entropy,
+    ]) {
       buffer?.fill(0);
     }
   }

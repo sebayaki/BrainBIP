@@ -1,96 +1,75 @@
 ![BrainBIP — A passphrase. Twelve words. Five chains.](assets/banner.svg)
 
 <p align="center">
-  <a href="https://sebayaki.github.io/BrainBIP/">Live demo ↗</a> ·
-  <a href="https://sebayaki.github.io/BrainBIP/brainbip.html">Standalone HTML</a> ·
-  <a href="https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt">SHA256 checksums</a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2f6b45"></a>
+  <a href="docs/security.md"><img alt="Experimental" src="https://img.shields.io/badge/status-experimental-b88646"></a>
+  <a href="https://github.com/sebayaki/BrainBIP/actions/workflows/ci.yml"><img alt="Check" src="https://github.com/sebayaki/BrainBIP/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/sebayaki/BrainBIP/releases"><img alt="Application version" src="https://img.shields.io/github/package-json/v/sebayaki/BrainBIP?color=697167"></a>
 </p>
 
 <p align="center">
-  <a href="#try-it-locally">Try it locally</a> ·
-  <a href="docs/derivation.md">Derivation specification</a> ·
-  <a href="#security-model">Security model</a> ·
-  <a href="LICENSE">MIT license</a>
+  <a href="https://sebayaki.github.io/BrainBIP/">Demo ↗</a> ·
+  <a href="https://sebayaki.github.io/BrainBIP/brainbip.html">Offline edition</a> ·
+  <a href="https://github.com/sebayaki/BrainBIP/releases">Releases</a> ·
+  <a href="docs/derivation.md">Derivation</a> ·
+  <a href="docs/security.md">Security</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
-BrainBIP turns a **passphrase + optional email salt** into a twelve-word BIP39 recovery phrase and twenty receiving addresses each for Bitcoin, Ethereum, Solana, Zcash, and Monero.
+BrainBIP turns a **passphrase + optional email salt** into twelve BIP39 recovery words and twenty receiving addresses each for Bitcoin, Ethereum, Solana, Zcash, and Monero.
 
-Everything runs on your device. The build produces a complete HTML file with the interface, dictionaries, cryptographic code, and WebAssembly embedded. Open it in a browser, even without an internet connection.
+The interface, cryptographic code, dictionaries, fonts, and WebAssembly fit in **one HTML file**. Everything runs on your device, including strength estimates. No server, CDN, RPC, analytics, or runtime downloads are required.
 
-> **Experimental, unaudited software.** A memory-hard function makes guessing more expensive; it cannot give a predictable passphrase the security of randomly generated recovery words.
+> **Experimental and unaudited.** Argon2id and PBKDF2 make guessing more expensive; they cannot give a predictable passphrase the security of randomly generated recovery words. Read the [security model](docs/security.md) before using the tool.
 
-In the live demo, select **Offline edition** to download the standalone HTML file. The direct HTML link above may open in your browser; use **Save link as** on that link to download the original file. Both links provide the same complete app.
+## Use BrainBIP
 
-## A small, complete tool
+1. Open the [demo](https://sebayaki.github.io/BrainBIP/) or download the [offline edition](https://sebayaki.github.io/BrainBIP/brainbip.html). The demo's **Offline edition** button saves the complete app; open that file locally to work without a connection.
+2. Enter a passphrase and, optionally, an email salt. Select **Generate recovery phrase**.
+3. Reveal the twelve words and browse the five address tabs. The Monero tab also provides its own 25-word recovery phrase.
+4. Select **Clear & reset** to discard inputs and results. Your system clipboard is not cleared.
 
-- **Reproducible:** the same normalized inputs and `brainbip-v1` profile produce the same wallet.
-- **Two derivation branches:** Argon2id and PBKDF2-SHA256, combined before creating the recovery phrase.
-- **Twelve words:** numbered cards with reveal, hide, and explicit copy controls.
-- **One hundred addresses:** twenty per chain, with the derivation path and Monero subaddress indexes available.
-- **Monero recovery:** a separate 25-word Monero phrase for compatible software wallets.
-- **Local guesswork estimates:** dictionary-aware feedback, with a private-email estimate switch that starts off.
-- **An offline edition:** one HTML file, no server, CDN, RPC, analytics, or runtime downloads.
+Use [Releases](https://github.com/sebayaki/BrainBIP/releases) for versioned downloads. The hosted demo follows `main`. Verify downloads against their accompanying `SHA256SUMS.txt`; the hosted checksum file is [available here](https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt).
 
-## Try it locally
+The app requires a modern browser with WebAssembly and Web Workers, plus **256 MiB of derivation memory and browser overhead**. It never lowers the computation cost automatically.
 
-Requires Node.js 24 or later to build. The generated app only needs a modern browser with WebAssembly and Web Workers, and enough memory for a 256 MiB derivation plus browser overhead.
+## What it does
 
-```sh
-npm ci
-npm run check
-npm run dev
-```
-
-The preview is served at `http://127.0.0.1:4173`. Alternatively, open `dist/brainbip.html` directly in your browser. That file is the entire offline edition; it is byte-identical to the hosted `dist/index.html`.
-
-1. Enter a passphrase and, optionally, an email salt.
-2. Select **Generate recovery phrase**. Computation runs in a worker, with cancellation available.
-3. Reveal the twelve words and browse each chain’s receiving addresses. Monero also provides its own 25-word recovery phrase.
-4. Select **Clear & reset** to discard the app’s inputs and results. This does not clear your system clipboard.
-
-The generated `dist/` directory is ready for static hosting, including GitHub Pages. All app resources are embedded, so it works under a repository subpath. `SHA256SUMS.txt` records the HTML checksums; third-party notices are included both in the HTML and as a separate file.
+- **Deterministic recovery:** the same normalized inputs and fixed derivation mappings reproduce the same wallet.
+- **One hundred addresses:** twenty per chain, with derivation paths and Monero subaddress indexes.
+- **Explicit secret controls:** reveal, hide, copy, cancel, and reset.
+- **Local guesswork estimates:** dictionary-aware feedback; the private-email switch starts **OFF** and changes the estimate only.
+- **Portable offline use:** an embedded build with checksums and third-party notices.
 
 ## Recovery and compatibility
 
-The custom input-to-mnemonic scheme is specific to BrainBIP. The resulting mnemonic follows BIP39, using the English wordlist and an **empty additional BIP39 passphrase**. Your original BrainBIP passphrase is not the additional passphrase requested by other BIP39 wallets.
+The generated English BIP39 phrase uses an **empty additional BIP39 passphrase**. Your original BrainBIP passphrase is already used to derive the words; do not enter it again as another wallet's additional passphrase.
 
-| Chain | Mainnet address type | Derivation path, `i = 0…19` |
-| --- | --- | --- |
-| Bitcoin | Native SegWit P2WPKH, `bc1q…` | `m/84'/0'/0'/0/i` |
-| Ethereum | EIP-55 checksummed | `m/44'/60'/0'/0/i` |
-| Solana | Ed25519, Base58 | `m/44'/501'/i'/0'` |
-| Zcash | Transparent P2PKH, `t1…` | `m/44'/133'/0'/0/i` |
-| Monero | Primary `4…` and subaddresses `8…` | Ledger mapping `m/44'/128'/0'/0/0`; account `0`, subaddress `i` |
+| Chain    | Receiving addresses                   | Mapping, `i = 0…19`                                     |
+| -------- | ------------------------------------- | ------------------------------------------------------- |
+| Bitcoin  | Native SegWit, `bc1q…`                | `m/84'/0'/0'/0/i`                                       |
+| Ethereum | EIP-55 checksummed                    | `m/44'/60'/0'/0/i`                                      |
+| Solana   | Ed25519, Base58                       | `m/44'/501'/i'/0'`                                      |
+| Zcash    | Transparent P2PKH, `t1…`              | `m/44'/133'/0'/0/i`                                     |
+| Monero   | One primary address + 19 subaddresses | Ledger `m/44'/128'/0'/0/0`; account `0`, subaddress `i` |
 
-Wallet import support and address discovery vary. A matching mnemonic alone does not ensure another wallet displays these paths. Zcash shielded and Unified Addresses are outside this version’s scope. BrainBIP displays addresses; it does not query balances or sign transactions.
+**Monero needs its separate 25-word legacy recovery phrase for standard Monero seed import.** The twelve BIP39 words are not directly accepted there. Leave the Monero seed-offset passphrase empty and use a restore date before the first incoming transaction. The 25 words restore Monero only. Trezor uses a different Monero derivation.
 
-Monero uses the fixed **`ledger-bip39-v1`** mapping: one wallet with its primary address and nineteen subaddresses. Standard Monero seed import does **not** accept the twelve BIP39 words. Use the separate **25-word Monero recovery phrase**, select the legacy seed format where offered, leave its seed-offset passphrase empty, and choose a restore date before the first incoming transaction. This phrase restores only the Monero wallet. Trezor uses a different Monero mapping; the same BIP39 words can produce a different Monero wallet there. See the [Monero recovery guide](https://www.getmonero.org/resources/user-guides/restore_account.html) and [Trezor compatibility explanation](https://trezor.io/learn/supported-assets/other-cryptocurrencies/what-is-monero-and-how-does-it-work-with-trezor).
+Import support and address discovery vary between wallets; matching words alone do not guarantee matching addresses. Zcash shielded and Unified Addresses are outside this app's scope. BrainBIP displays receiving addresses and does not query balances or sign transactions.
 
-The [derivation specification](docs/derivation.md) defines normalization, salt encoding, fixed parameters, and public test vectors. Keep the derivation version available for recovery. Settings are never reduced automatically on slower devices.
+Application versions are separate from the fixed recovery identifiers **`brainbip-v1`** and **`ledger-bip39-v1`**. Keep the [derivation specification](docs/derivation.md) or a verified offline release available for recovery.
 
-## Security model
-
-An attacker can check guesses offline. There is no login server, rate limit, password reset, or recovery service. Anyone who reproduces the inputs can reproduce the wallet. Twelve output words have a 128-bit entropy capacity, but the strength of user-chosen inputs can be much lower. These chains’ ordinary signing keys are not post-quantum secure.
-
-An email is treated as a **public salt by default** and adds zero estimated secret strength. The **private-email switch starts off and affects the estimate only**; toggling it never changes the recovery phrase or addresses. Its optional model assumes the email name is unknown and independent of the passphrase; the app cannot verify that assumption. The estimate excludes domain, letter case, and `+tags`, checks obvious overlap, and caps the conditional credit at 32 estimate bits. Neither the cap nor the displayed score is a calibrated security guarantee. English dictionaries provide limited coverage for other languages and personal references.
-
-The app does not write inputs to browser storage or send them over the network. Editing an input invalidates prior results. Reset terminates workers and clears the app’s references and visible data; JavaScript and browser memory cannot offer a complete erasure guarantee. Clipboard contents, browser extensions, and a compromised device remain outside the app’s control. For sensitive experiments, inspect and verify the offline build before entering inputs.
-
-## Development
+## Build and contribute
 
 ```sh
-npm test             # Cryptographic vectors, normalization, and strength estimates
-npm run build        # Generate both standalone HTML editions and notices
-npm run test:build   # Verify checksums, CSP hashes, and offline packaging
-npm run test:browser # Exercise desktop Chrome and mobile WebKit
+npm ci
+npm run dev
 ```
 
-Browser tests use a locally installed Google Chrome and Playwright WebKit. Run `npx playwright install webkit` before the first local browser-test run; CI installs Chromium and WebKit. Dependencies are pinned in `package-lock.json` and bundled at build time. Test fixtures contain deliberately public example secrets and must never receive funds.
+Requires Node.js 24 or later. The preview runs at `http://127.0.0.1:4173`; `dist/brainbip.html` is the complete offline edition. See [CONTRIBUTING.md](CONTRIBUTING.md) for checks, browser tests, and release conventions.
 
-The Pages workflow checks the cryptographic vectors, standalone packaging, and browser behavior before publishing `dist/`. It runs when app, test, or build files change on `main`, and can also be started manually. Repository owners must select **GitHub Actions** as the publishing source in **Settings → Pages** before the first deployment.
-
-The interface uses vanilla JavaScript and CSS. Cryptographic primitives come from [hash-wasm](https://github.com/Daninet/hash-wasm), [noble](https://github.com/paulmillr/noble-hashes), [scure](https://github.com/paulmillr/scure-bip39), and [micro-key-producer](https://github.com/paulmillr/micro-key-producer). Local password estimates use [zxcvbn-ts](https://github.com/zxcvbn-ts/zxcvbn). Inspired by [WarpWallet](https://github.com/keybase/warpwallet).
+Inspired by [WarpWallet](https://github.com/keybase/warpwallet). Cryptographic primitives use [hash-wasm](https://github.com/Daninet/hash-wasm), [noble](https://github.com/paulmillr/noble-hashes), [scure](https://github.com/paulmillr/scure-bip39), and [micro-key-producer](https://github.com/paulmillr/micro-key-producer); local estimates use [zxcvbn-ts](https://github.com/zxcvbn-ts/zxcvbn).
 
 ## License
 
-BrainBIP code is [MIT licensed](LICENSE). Bundled third-party code and data retain their own licenses and attribution, including the English frequency data’s [ODC-BY license](https://opendatacommons.org/licenses/by/1-0/), the embedded fonts’ [SIL Open Font License](https://openfontlicense.org/), and the Monero English wordlist’s [BSD-3-Clause notice](https://github.com/monero-project/monero/blob/master/src/mnemonics/english.h). Notices are included in the offline edition. Dependency audit history does not constitute an audit of BrainBIP or its custom composition.
+BrainBIP code is [MIT licensed](LICENSE). Bundled dependencies, fonts, and data retain their own licenses, including ODC-BY, SIL OFL, and the Monero wordlist's BSD-3-Clause notice. Every standalone build includes the full third-party notices.

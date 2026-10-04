@@ -1,0 +1,62 @@
+name: Verify distribution
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to verify; empty uses the triggering commit.
+        type: string
+        default: ''
+      release-tag:
+        description: Optional release tag to validate against package metadata.
+        type: string
+        default: ''
+    outputs:
+      commit:
+        description: Exact source commit used to build the verified artifact.
+        value: ${{ jobs.verify.outputs.commit }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      commit: ${{ steps.revision.outputs.commit }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Record the verified source revision
+        id: revision
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Check code, metadata, vectors, and packaging
+        run: npm run check
+      - name: Validate release tag
+        if: inputs.release-tag != ''
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        run: node scripts/release.mjs check "$RELEASE_TAG"
+      - name: Install test browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: Verify browser and offline behavior
+        run: npm run test:browser
+      - name: Save the verified distribution
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: brainbip-dist
+          path: dist/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14

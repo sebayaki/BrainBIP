@@ -4,7 +4,8 @@
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url('../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2') format('woff2');
+  src: url('../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2')
+    format('woff2');
 }
 
 @font-face {
@@ -12,7 +13,8 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+  src: url('../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2')
+    format('woff2');
 }
 
 @font-face {
@@ -20,5 +22,6 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+  src: url('../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2')
+    format('woff2');
 }

@@ -27,26 +27,26 @@ SB = UTF8("BrainBIP/v1/pbkdf2\0")   || E
 
 Compute `A` from Argon2id:
 
-| Parameter | V1 value |
-|---|---|
-| Password | `P` |
-| Salt | `SA` |
-| Algorithm/version | Argon2id, version `0x13` / decimal 19 |
-| Memory cost `m` | 262,144 KiB = 256 MiB |
-| Time cost `t` | 3 passes |
-| Parallelism `p` | 1 |
-| Tag length | 32 bytes |
-| Secret and associated data | Empty |
+| Parameter                  | V1 value                              |
+| -------------------------- | ------------------------------------- |
+| Password                   | `P`                                   |
+| Salt                       | `SA`                                  |
+| Algorithm/version          | Argon2id, version `0x13` / decimal 19 |
+| Memory cost `m`            | 262,144 KiB = 256 MiB                 |
+| Time cost `t`              | 3 passes                              |
+| Parallelism `p`            | 1                                     |
+| Tag length                 | 32 bytes                              |
+| Secret and associated data | Empty                                 |
 
 Compute `B` independently from PBKDF2:
 
-| Parameter | V1 value |
-|---|---|
-| Password | `P`, independently of `A` |
-| Salt | `SB` |
-| PRF | HMAC-SHA256 |
-| Iterations | 1,048,576 |
-| Output length | 32 bytes |
+| Parameter     | V1 value                  |
+| ------------- | ------------------------- |
+| Password      | `P`, independently of `A` |
+| Salt          | `SB`                      |
+| PRF           | HMAC-SHA256               |
+| Iterations    | 1,048,576                 |
+| Output length | 32 bytes                  |
 
 The shipped implementation uses pinned hash-wasm Argon2id and PBKDF2/SHA256 code. Its WebAssembly binaries are embedded in the local JavaScript bundle; no runtime fetch is required. WebAssembly, sufficient memory, and ordinary browser execution are required. Allocation or execution failure stops generation; it never changes the profile. Total process memory exceeds the 256 MiB Argon2 memory parameter.
 
@@ -75,13 +75,13 @@ The `deriveAddresses` API accepts twelve valid English BIP39 words and canonical
 
 The application derives indexes **0 through 19**, displayed as positions 1 through 20. Each output contains its zero-based `index`, complete `path`, and public `address`. Apostrophes indicate hardened derivation.
 
-| Network | Curve and key derivation | Path for index `i` | Address |
-|---|---|---|---|
-| Bitcoin mainnet | secp256k1, BIP32/BIP84 | `m/84'/0'/0'/0/i` | Native SegWit P2WPKH, `bc1q…` |
-| Ethereum | secp256k1, BIP32/BIP44 | `m/44'/60'/0'/0/i` | 20-byte `0x…` address with EIP55 checksum |
-| Solana | Ed25519, SLIP-0010 | `m/44'/501'/i'/0'` | Base58 of the raw 32-byte Ed25519 public key |
-| Zcash mainnet | secp256k1, BIP32/BIP44 | `m/44'/133'/0'/0/i` | Transparent P2PKH `t1…` |
-| Monero mainnet | Ledger BIP32 secp256k1 mapping to Edwards25519 scalars | `m/44'/128'/0'/0/0`; Monero account `0`, subaddress `i` | Primary `4…` at `i = 0`; subaddresses `8…` at `i = 1…19` |
+| Network         | Curve and key derivation                               | Path for index `i`                                      | Address                                                  |
+| --------------- | ------------------------------------------------------ | ------------------------------------------------------- | -------------------------------------------------------- |
+| Bitcoin mainnet | secp256k1, BIP32/BIP84                                 | `m/84'/0'/0'/0/i`                                       | Native SegWit P2WPKH, `bc1q…`                            |
+| Ethereum        | secp256k1, BIP32/BIP44                                 | `m/44'/60'/0'/0/i`                                      | 20-byte `0x…` address with EIP55 checksum                |
+| Solana          | Ed25519, SLIP-0010                                     | `m/44'/501'/i'/0'`                                      | Base58 of the raw 32-byte Ed25519 public key             |
+| Zcash mainnet   | secp256k1, BIP32/BIP44                                 | `m/44'/133'/0'/0/i`                                     | Transparent P2PKH `t1…`                                  |
+| Monero mainnet  | Ledger BIP32 secp256k1 mapping to Edwards25519 scalars | `m/44'/128'/0'/0/0`; Monero account `0`, subaddress `i` | Primary `4…` at `i = 0`; subaddresses `8…` at `i = 1…19` |
 
 BTC, ETH, and ZEC increment the final **address index within account 0**. SOL increments a **hardened account index**. XMR increments a **Monero subaddress index within one wallet and account**, without changing its BIP32 path. These are twenty addresses per network, rather than twenty BIP44 accounts on every network. XMR outputs include `account: 0` and `subaddress: i` in addition to `index`, `path`, and `address`.
 
