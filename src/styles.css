@@ -31,12 +31,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 button,
-input {
+input,
+select {
   font: inherit;
 }
 button,
 a,
 input,
+select,
 summary {
   -webkit-tap-highlight-color: transparent;
 }
@@ -55,6 +57,7 @@ a {
 }
 button,
 input,
+select,
 a,
 summary {
   outline-offset: 4px;
@@ -65,7 +68,8 @@ summary:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--green);
 }
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--green);
   outline-offset: 2px;
 }
@@ -586,15 +590,6 @@ input::placeholder {
 .empty-state {
   flex: 1;
 }
-.profile-tag {
-  padding: 6px 8px;
-  border: 1px solid #d6e2cd;
-  border-radius: 4px;
-  background: #f0f5e9;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-}
 .empty-state {
   display: flex;
   align-items: center;
@@ -1092,11 +1087,89 @@ input::placeholder {
   color: #eff5e7;
 }
 .chain-description {
-  margin: 0 0 16px;
+  margin: 0;
   min-height: 18px;
+  min-width: 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
+}
+.address-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.derivation-field {
+  width: 216px;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.derivation-field label,
+.custom-derivation > label,
+.address-type-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.derivation-field select,
+.address-type-field select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: #fdfef8;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 24px;
+}
+.custom-derivation {
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8faf3;
+}
+.custom-path-entry {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.custom-path-entry input {
+  min-width: 0;
+  height: 44px;
+  padding: 10px 12px;
+}
+.custom-path-entry .button {
+  flex-shrink: 0;
+  min-width: 64px;
+  padding: 8px 12px;
+}
+.address-type-field {
+  margin-top: 16px;
+}
+.custom-path-help {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.address-status,
+.address-error {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.address-error {
+  color: #8b4d32;
 }
 .address-table-wrap {
   max-height: 432px;
@@ -1130,7 +1203,7 @@ input::placeholder {
   width: 56px;
 }
 .address-table td {
-  padding: 16px 8px;
+  padding: 8px;
   border-bottom: 1px solid #e2e9d8;
   vertical-align: middle;
 }
@@ -1163,32 +1236,6 @@ input::placeholder {
   font-size: 10px;
   line-height: 1.6;
   overflow-wrap: anywhere;
-}
-.address-path-details {
-  margin-top: 8px;
-}
-.address-path-details > summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  min-height: 44px;
-  padding: 4px 0;
-  list-style: none;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.5;
-}
-.address-path-details > summary::-webkit-details-marker {
-  display: none;
-}
-.address-path-details > summary::before {
-  content: '+';
-  font-family: var(--mono);
-  font-size: 12px;
-}
-.address-path-details[open] > summary::before {
-  content: '−';
 }
 .copy-address {
   display: flex;
@@ -1225,9 +1272,6 @@ input::placeholder {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-.result-footer > span:last-child {
-  font-family: var(--mono);
 }
 .docs-section {
   margin-top: 64px;
@@ -1829,7 +1873,27 @@ input::placeholder {
   }
   .chain-description {
     font-size: 11px;
+  }
+  .address-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
     margin-bottom: 12px;
+  }
+  .derivation-field {
+    width: 100%;
+  }
+  .custom-derivation {
+    padding: 12px;
+  }
+  .custom-path-entry {
+    flex-wrap: wrap;
+  }
+  .custom-path-entry input {
+    flex-basis: 100%;
+  }
+  .custom-path-entry .button {
+    margin-left: auto;
   }
   .address-table-wrap {
     max-height: 416px;
@@ -1845,7 +1909,7 @@ input::placeholder {
     width: 52px;
   }
   .address-table td {
-    padding: 16px 6px;
+    padding: 8px 6px;
   }
   .address-table td:first-child {
     font-size: 9px;
@@ -1856,9 +1920,6 @@ input::placeholder {
   }
   .address-path {
     font-size: 9px;
-  }
-  .address-path-details > summary {
-    font-size: 10px;
   }
   .result-footer {
     font-size: 9px;

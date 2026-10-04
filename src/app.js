@@ -1,4 +1,5 @@
 import walletWorkerSource from './wallet.worker.js?worker';
+import addressWorkerSource from './addresses.worker.js?worker';
 import strengthWorkerSource from './strength.worker.js?worker';
 import { createWorkerOwner } from './worker-task.js';
 import { createClipboardController } from './ui/clipboard.js';
@@ -19,7 +20,16 @@ let scrollFrame = 0;
 
 const wallet = createWorkerOwner(walletWorkerSource);
 const clipboard = createClipboardController($('copy-status'), () => uiRevision);
-const recovery = createRecoveryView({ getElement: $, copyText: clipboard.copyText });
+const recovery = createRecoveryView({
+  getElement: $,
+  copyText: clipboard.copyText,
+  workerSource: addressWorkerSource,
+  nextJobId: () => ++jobCounter,
+  onAddressChange: () => {
+    uiRevision += 1;
+    clipboard.clear();
+  },
+});
 const progress = createProgressController({ getElement: $ });
 const strength = createStrengthController({
   getElement: $,

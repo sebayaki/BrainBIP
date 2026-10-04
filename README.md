@@ -26,8 +26,8 @@ The interface, cryptographic code, dictionaries, fonts, and WebAssembly fit in *
 
 1. Open the [demo](https://sebayaki.github.io/BrainBIP/) or download the [offline edition](https://sebayaki.github.io/BrainBIP/brainbip.html). The demo's **Offline edition** button saves the complete app; open that file locally to work without a connection.
 2. Enter a passphrase and, optionally, an email salt. Select **Generate recovery phrase**.
-3. Reveal the twelve words and browse the four network tabs.
-4. Select **Clear & reset** to discard inputs and results. Your system clipboard is not cleared.
+3. Reveal the twelve words and browse the four network tabs. Choose an address path preset, or enter a custom path, to view twenty addresses for that selection.
+4. Use the reset control to discard inputs and results. Your system clipboard is not cleared.
 
 Use [Releases](https://github.com/sebayaki/BrainBIP/releases) for versioned downloads. The hosted demo follows `main`. Verify downloads against their accompanying `SHA256SUMS.txt`; the hosted checksum file is [available here](https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt).
 
@@ -35,9 +35,10 @@ The app requires a modern browser with WebAssembly and Web Workers, plus **512 M
 
 ## What it does
 
-- **Deterministic recovery:** the same normalized inputs and fixed derivation mappings reproduce the same wallet.
-- **One fixed derivation:** Argon2id and PBKDF2 run with the same parameters on every device.
-- **Eighty addresses:** twenty per chain, with derivation paths.
+- **Deterministic recovery words:** the same normalized inputs reproduce the same twelve words.
+- **One fixed mnemonic derivation:** Argon2id and PBKDF2 run with the same parameters on every device.
+- **Address path choices:** Bitcoin address types, Ethereum Ledger layouts, Solana paths, and custom templates.
+- **Eighty default addresses:** twenty per chain, with each complete path always visible. Changing a path derives addresses locally without repeating the heavy computation.
 - **Four network tabs:** Bitcoin, Ethereum, Solana, and Zcash, with full names and embedded SVG icons.
 - **Explicit secret controls:** reveal, hide, copy, cancel, and reset.
 - **Local guesswork estimates:** dictionary-aware feedback; the private-email switch starts **OFF** and changes the estimate only.
@@ -47,16 +48,20 @@ The app requires a modern browser with WebAssembly and Web Workers, plus **512 M
 
 The generated English BIP39 phrase uses an **empty additional BIP39 passphrase**. Your original BrainBIP passphrase is already used to derive the words; do not enter it again as another wallet's additional passphrase.
 
-| Chain    | Receiving addresses      | Mapping, `i = 0…19` |
-| -------- | ------------------------ | ------------------- |
-| Bitcoin  | Native SegWit, `bc1q…`   | `m/84'/0'/0'/0/i`   |
-| Ethereum | EIP-55 checksummed       | `m/44'/60'/0'/0/i`  |
-| Solana   | Ed25519, Base58          | `m/44'/501'/i'/0'`  |
-| Zcash    | Transparent P2PKH, `t1…` | `m/44'/133'/0'/0/i` |
+The initial address lists use these defaults:
 
-Import support and address discovery vary between wallets; matching words alone do not guarantee matching addresses. Zcash shielded and Unified Addresses are outside this app's scope. BrainBIP displays receiving addresses and does not query balances or sign transactions.
+| Chain    | Receiving addresses      | Default path, `i = 0…19` |
+| -------- | ------------------------ | ------------------------ |
+| Bitcoin  | Native SegWit, `bc1q…`   | `m/84'/0'/0'/0/i`        |
+| Ethereum | EIP-55 checksummed       | `m/44'/60'/0'/0/i`       |
+| Solana   | Ed25519, Base58          | `m/44'/501'/i'/0'`       |
+| Zcash    | Transparent P2PKH, `t1…` | `m/44'/133'/0'/0/i`      |
 
-Keep the [fixed derivation specification](docs/derivation.md) or a verified offline release available for recovery. The app exposes one derivation algorithm; its application version identifies the software build.
+Bitcoin also offers Nested SegWit and Legacy; Ethereum offers Ledger legacy and Ledger Live; Solana offers the shorter BIP44 account path. Every chain accepts a bounded custom path with one `{index}` placeholder. Solana paths must be entirely hardened; custom Bitcoin paths require an explicit address type. See the [preset and custom-path specification](docs/derivation.md#4-derive-mainnet-addresses).
+
+Keep the selected path and address type for recovery. Choosing a different path changes the addresses while keeping the twelve words unchanged. Import support and address discovery vary between wallets; matching words alone do not guarantee matching addresses. Zcash shielded and Unified Addresses are outside this app's scope. BrainBIP displays receiving addresses and does not query balances or sign transactions.
+
+Keep the [derivation specification](docs/derivation.md) or a verified offline release available for recovery. The input-to-mnemonic algorithm is fixed; its application version identifies the software build.
 
 ## Build and contribute
 

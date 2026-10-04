@@ -25,13 +25,15 @@ npm run test:browser # Desktop Chrome and mobile WebKit
 
 Local desktop tests use an installed Google Chrome; mobile tests use Playwright WebKit. CI installs Chromium and WebKit. Playwright WebKit checks browser-engine behavior and mobile layouts; it does not replace testing on a physical iPhone.
 
-Use `npm run format:check` to check formatting without editing files and `npm run check:repo` to check version, lockfile, and changelog consistency. `npm test` runs unit tests, `npm run build` regenerates the offline edition, and `npm run test:build` checks an existing build. Review desktop and narrow layouts, cancellation, input edits, reset, secret reveal/copy, and offline execution when changing the interface.
+Use `npm run format:check` to check formatting without editing files and `npm run check:repo` to check version, lockfile, and changelog consistency. `npm test` runs unit tests, `npm run build` regenerates the offline edition, and `npm run test:build` checks an existing build. Review desktop and narrow layouts, cancellation, input edits, reset, secret reveal/copy, address path selection, and offline execution when changing the interface.
 
-The full-cost fixture in `tests/fixtures/brainbip-v2.json` records the fixed derivation, twelve words, and eighty BTC/ETH/SOL/ZEC addresses using independent reference implementations. Fixtures are deliberately public and must never receive funds. Ordinary tests must not rewrite their expected values.
+The full-cost fixture in `tests/fixtures/brainbip-v2.json` records the fixed mnemonic derivation, twelve words, and eighty default BTC/ETH/SOL/ZEC addresses using independent reference implementations. `tests/fixtures/address-presets.json` adds thirteen independent vectors with twenty rows each, covering all nine presets and one custom path per chain. Address tests also check published Bitcoin reference vectors. Fixtures are deliberately public and must never receive funds. Ordinary tests must not rewrite their expected values; the address reference generator runs explicitly with `node tests/reference-addresses.mjs --write`.
 
 ## Changes
 
-- Check cryptographic changes against the independent derivation vectors. Keep the specification and tests aligned with the single fixed algorithm, including input normalization, KDF parameters, paths, and address encodings.
+- Check cryptographic changes against the independent derivation vectors. Keep the specification and tests aligned with the fixed mnemonic algorithm and supported address mappings, including input normalization, KDF parameters, paths, and address encodings.
+- Validate address choices in the worker as well as the UI. Keep custom paths bounded, require exactly one `{index}`, and reject non-hardened Solana components. Bitcoin presets must pair the path with the correct address encoding; custom Bitcoin paths require an explicit type.
+- Changing an address path must keep the recovery phrase and fixed KDF untouched. Derive the selected chain's twenty addresses in a short-lived worker, and reject stale results after another selection, input edit, or reset.
 - Keep runtime resources embedded. Do not add a CDN, analytics, RPC, browser storage for inputs, or logging of secret values.
 - Keep estimates distinct from measured entropy. The private-email switch is opt-in and affects estimates only.
 - Show actual derivation stages and elapsed time. The bundled Argon2 API has no intermediate progress callback; do not present elapsed time as a measured completion percentage. Runtime benchmarks must never alter the fixed KDF parameters.

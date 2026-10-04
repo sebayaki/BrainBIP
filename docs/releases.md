@@ -6,9 +6,9 @@ Application versions follow `MAJOR.MINOR.PATCH`, optionally followed by a prerel
 
 ## One fixed derivation
 
-The app exposes one fixed input-to-mnemonic algorithm and Bitcoin, Ethereum, Solana, and Zcash mappings. Application versions identify software builds; they are not adjustable derivation parameters.
+The app exposes one fixed input-to-mnemonic algorithm and selectable Bitcoin, Ethereum, Solana, and Zcash address mappings. Application versions identify software builds; they are not adjustable KDF parameters. Address presets and custom paths operate on the generated phrase and do not change its derivation.
 
-Check interface and dependency changes against the independent derivation vectors. Keep the specification, tests, and release notes aligned with the algorithm shipped in the build. Runtime parameters never adapt to device performance.
+Check interface and dependency changes against the independent derivation vectors. Keep the specification, tests, and release notes aligned with the algorithm and address presets shipped in the build. Runtime parameters never adapt to device performance. Release 0.3.0 adds address choices while preserving the 0.2.0 mnemonic mapping and default address vectors.
 
 ## Prepare a version
 

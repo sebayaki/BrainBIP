@@ -30,11 +30,15 @@ Editing an input invalidates the generated results. Cancellation terminates the 
 
 Copying is explicit. **Reset does not clear the system clipboard**, and other applications may retain copied contents. Hiding a recovery phrase conceals its visible text while the app still holds the result for later reveal or copy.
 
-## Recovery depends on the exact mapping
+## Recovery depends on inputs and address choices
 
-The [derivation specification](derivation.md) defines one fixed input mapping for Bitcoin, Ethereum, Solana, and Zcash. App release versions identify software builds. Cost parameters never adapt to slower devices: a failed computation does not silently produce a different wallet.
+The [derivation specification](derivation.md) defines one fixed input-to-mnemonic mapping and the supported Bitcoin, Ethereum, Solana, and Zcash address choices. App release versions identify software builds. Cost parameters never adapt to slower devices: a failed computation does not silently produce a different wallet.
 
-Recovery from memory requires the same normalized passphrase, optional email salt, and mapping. Losing or changing those inputs can make the wallet inaccessible. Recovery from the generated BIP39 words requires the stated chain paths and an empty additional BIP39 passphrase; external wallet discovery varies.
+Recovery from memory requires the same normalized passphrase and optional email salt. Losing or changing those inputs can make the wallet inaccessible. Recovery from the generated BIP39 words requires an empty additional BIP39 passphrase and the same chain path and address type; external wallet discovery varies.
+
+Changing a path produces a different address list from the same twelve words. Save the complete path and, for Bitcoin, the address type you used. Preset names describe a derivation convention; they do not guarantee that another wallet will discover every unused address. A custom path can be syntactically valid yet unsupported by the wallet you later use to restore.
+
+Address selection is informational. It derives twenty public addresses locally from the current recovery phrase, without repeating the heavy KDF, checking balances, or signing transactions. The address worker closes after its result; changing the selection, editing an input, or resetting invalidates pending results. Custom paths are bounded to 160 characters and ten components with exactly one `{index}` placeholder. Solana accepts only hardened components, and custom Bitcoin paths require an explicit address format.
 
 All committed example phrases, keys, and addresses are **public test vectors**. Never deposit funds to them or submit real secrets in an issue, pull request, screenshot, or test fixture.
 

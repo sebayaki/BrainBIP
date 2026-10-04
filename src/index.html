@@ -178,8 +178,8 @@
                   unaudited</a
                 ><button id="reset-button" class="text-button" type="button">
                   Clear &amp; reset
-                  <svg viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="M5 6a6 6 0 1 1-1 7M5 2v4H1"></path>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 1 9 9M3 4v8h8"></path>
                   </svg>
                 </button>
               </div>
@@ -198,7 +198,6 @@
                 <p class="panel-kicker">02 / RECOVERY</p>
                 <h2 id="output-heading">Your wallet, derived.</h2>
               </div>
-              <span id="profile-tag" class="profile-tag" hidden>V2</span>
             </div>
 
             <div id="empty-state" class="empty-state">
@@ -470,8 +469,55 @@
                     ><span class="chain-name">Zcash</span>
                   </button>
                 </div>
-                <div id="address-panel" role="tabpanel" aria-labelledby="tab-btc" tabindex="0">
-                  <p id="chain-description" class="chain-description"></p>
+                <div
+                  id="address-panel"
+                  role="tabpanel"
+                  aria-labelledby="tab-btc"
+                  aria-busy="false"
+                  tabindex="0"
+                >
+                  <div class="address-controls">
+                    <p id="chain-description" class="chain-description"></p>
+                    <div class="derivation-field">
+                      <label for="derivation-select">Derivation path</label>
+                      <select id="derivation-select" aria-label="Derivation path"></select>
+                    </div>
+                  </div>
+                  <div id="custom-derivation" class="custom-derivation" hidden>
+                    <label for="custom-path">Path template</label>
+                    <div class="custom-path-entry">
+                      <input
+                        id="custom-path"
+                        type="text"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        aria-describedby="custom-path-help"
+                      />
+                      <button id="apply-path" class="button" type="button">Apply</button>
+                    </div>
+                    <div id="address-type-field" class="address-type-field" hidden>
+                      <label for="address-type">Bitcoin address format</label>
+                      <select id="address-type">
+                        <option value="native">Native SegWit</option>
+                        <option value="nested">Nested SegWit</option>
+                        <option value="legacy">Legacy</option>
+                      </select>
+                    </div>
+                    <p id="custom-path-help" class="custom-path-help">
+                      Use exactly one {index} for the receiving address index.
+                    </p>
+                  </div>
+                  <p
+                    id="address-status"
+                    class="address-status"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    hidden
+                  ></p>
+                  <p id="address-error" class="address-error" role="alert" hidden></p>
                   <div class="address-table-wrap">
                     <table class="address-table">
                       <thead>
@@ -490,7 +536,7 @@
                 <span
                   ><span class="tiny-dot" aria-hidden="true"></span
                   ><span id="result-timing">Derived locally</span></span
-                ><span id="result-profile">brainbip-v2</span>
+                >
               </div>
             </div>
           </section>
@@ -590,7 +636,7 @@
                     <thead>
                       <tr>
                         <th scope="col">Network</th>
-                        <th scope="col">Receiving path</th>
+                        <th scope="col">Default receiving path</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -614,8 +660,13 @@
                   </table>
                 </div>
                 <p>
-                  Bitcoin uses native SegWit. Zcash uses transparent P2PKH addresses, with no
+                  Bitcoin defaults to native SegWit. Zcash uses transparent P2PKH addresses, with no
                   shielded privacy.
+                </p>
+                <p>
+                  Choose a preset or custom path above the address list. Changing the path keeps
+                  your twelve words unchanged. Keep the chosen path and address type for recovery;
+                  another wallet must use the same settings to show matching addresses.
                 </p>
                 <p>
                   BrainBIP displays receiving addresses; it does not query balances or sign

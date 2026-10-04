@@ -1,9 +1,40 @@
+import { createWorkerOwner } from '../worker-task.js';
+import {
+  DERIVATION_ERROR_MESSAGES,
+  getDerivationPresets,
+  resolveDerivation,
+} from '../derivation-paths.js';
+
 const chainDetails = {
-  btc: 'Bitcoin · Native SegWit receiving addresses · BIP84',
-  eth: 'Ethereum · Receiving accounts · BIP44',
-  sol: 'Solana · Ed25519 receiving accounts · hardened derivation',
+  btc: 'Bitcoin · Receiving addresses',
+  eth: 'Ethereum · Receiving accounts',
+  sol: 'Solana · Ed25519 receiving accounts',
   zec: 'Zcash · Transparent P2PKH addresses · no shielded privacy',
 };
+const validationMessages = new Set(Object.values(DERIVATION_ERROR_MESSAGES));
+const addressFailure = 'Address derivation could not finish. Try applying the path again.';
+
+function safeAddressError(error) {
+  return validationMessages.has(error?.message) ? error.message : addressFailure;
+}
+
+function defaultChoices(result) {
+  return Object.fromEntries(
+    Object.keys(chainDetails).map((chain) => {
+      const standard = resolveDerivation(chain);
+      return [
+        chain,
+        {
+          presetId: 'standard',
+          customPath: standard.path,
+          addressType: standard.addressType || 'native',
+          dirty: false,
+          rows: result?.addresses[chain] || null,
+        },
+      ];
+    }),
+  );
+}
 
 function renderWordGrid(grid, mnemonic, visible, visibleLabel, hiddenLabel) {
   grid.replaceChildren();
@@ -50,15 +81,10 @@ function renderAddresses(list, chain, rows) {
     const address = document.createElement('span');
     address.className = 'address-text';
     address.textContent = entry.address;
-    const pathDetails = document.createElement('details');
-    pathDetails.className = 'address-path-details';
-    const pathLabel = document.createElement('summary');
-    pathLabel.textContent = 'Derivation path';
     const path = document.createElement('span');
     path.className = 'address-path';
     path.textContent = entry.path;
-    pathDetails.append(pathLabel, path);
-    data.append(address, pathDetails);
+    data.append(address, path);
     const action = document.createElement('td');
     const button = document.createElement('button');
     button.type = 'button';
@@ -76,10 +102,20 @@ function renderAddresses(list, chain, rows) {
   });
 }
 
-export function createRecoveryView({ getElement: $, copyText }) {
+export function createRecoveryView({
+  getElement: $,
+  copyText,
+  workerSource,
+  nextJobId,
+  onAddressChange,
+}) {
+  const addressWorker = createWorkerOwner(workerSource);
   let currentResult = null;
+  let currentRows = [];
+  let choices = defaultChoices();
   let phraseVisible = false;
   let activeChain = 'btc';
+  let renderedChain = null;
 
   function renderMnemonic() {
     renderWordGrid(
@@ -112,7 +148,136 @@ export function createRecoveryView({ getElement: $, copyText }) {
           : 'smooth',
     });
   }
+  function clearAddressFeedback() {
+    $('address-status').hidden = true;
+    $('address-status').textContent = '';
+    $('address-error').hidden = true;
+    $('address-error').textContent = '';
+    $('custom-path').removeAttribute('aria-invalid');
+  }
+  function setAddressBusy(busy) {
+    $('address-panel').setAttribute('aria-busy', String(busy));
+    $('apply-path').disabled = busy;
+  }
+  function setAddressStatus(message) {
+    $('address-status').textContent = message;
+    $('address-status').hidden = false;
+  }
+  function showAddressError(message) {
+    setAddressBusy(false);
+    $('address-status').hidden = true;
+    $('address-status').textContent = '';
+    $('address-error').textContent = message;
+    $('address-error').hidden = false;
+  }
+  function invalidateRows() {
+    addressWorker.stop();
+    currentRows = [];
+    $('address-list').replaceChildren();
+    setAddressBusy(false);
+    clearAddressFeedback();
+    onAddressChange();
+  }
+  function selectionFor(chain, choice) {
+    if (choice.presetId !== 'custom') return { presetId: choice.presetId };
+    return {
+      presetId: 'custom',
+      customPath: choice.customPath,
+      ...(chain === 'btc' ? { addressType: choice.addressType } : {}),
+    };
+  }
+  function renderControls() {
+    const choice = choices[activeChain];
+    const select = $('derivation-select');
+    select.replaceChildren();
+    for (const preset of getDerivationPresets(activeChain)) {
+      const group = document.createElement('optgroup');
+      group.label = preset.label;
+      const option = document.createElement('option');
+      option.value = preset.id;
+      option.textContent = preset.path.replace('{index}', 'i');
+      group.append(option);
+      select.append(group);
+    }
+    const group = document.createElement('optgroup');
+    group.label = 'Custom path';
+    const custom = document.createElement('option');
+    custom.value = 'custom';
+    custom.textContent =
+      choice.presetId === 'custom' && !choice.dirty
+        ? choice.customPath.replace('{index}', 'i')
+        : 'Custom path…';
+    group.append(custom);
+    select.append(group);
+    select.value = choice.presetId;
+    $('custom-derivation').hidden = choice.presetId !== 'custom';
+    $('custom-path').value = choice.customPath;
+    $('address-type').value = choice.addressType;
+    $('address-type-field').hidden = choice.presetId !== 'custom' || activeChain !== 'btc';
+    $('custom-path-help').textContent =
+      activeChain === 'sol'
+        ? "Use exactly one {index}; every Solana component must end with an apostrophe (')."
+        : 'Use exactly one {index} for the receiving address index.';
+  }
+  function showRows(rows) {
+    currentRows = rows;
+    setAddressBusy(false);
+    clearAddressFeedback();
+    renderAddresses($('address-list'), activeChain, rows);
+  }
+  function loadAddresses() {
+    const chain = activeChain;
+    const choice = choices[chain];
+    if (!currentResult) return;
+    if (choice.dirty) {
+      setAddressStatus('Apply the path to generate addresses.');
+      return;
+    }
+    const selection = selectionFor(chain, choice);
+    try {
+      resolveDerivation(chain, selection);
+    } catch (error) {
+      showAddressError(safeAddressError(error));
+      return;
+    }
+    if (choice.rows) {
+      showRows(choice.rows);
+      return;
+    }
+    const result = currentResult;
+    setAddressBusy(true);
+    setAddressStatus('Deriving addresses on this device…');
+    try {
+      addressWorker.start(
+        nextJobId(),
+        { mnemonic: result.mnemonic, chain, selection },
+        {
+          onMessage(data) {
+            if (currentResult !== result || activeChain !== chain || choices[chain] !== choice)
+              return;
+            if (data.type === 'result') {
+              choice.rows = data.rows;
+              addressWorker.stop();
+              showRows(data.rows);
+            } else if (data.type === 'error') {
+              addressWorker.stop();
+              showAddressError(safeAddressError(data));
+            }
+          },
+          onError() {
+            addressWorker.stop();
+            showAddressError(addressFailure);
+          },
+        },
+      );
+    } catch {
+      showAddressError('This browser could not start local address derivation.');
+    }
+  }
   function selectChain(chain, focus = false) {
+    if (!currentResult || !Object.hasOwn(choices, chain)) return;
+    const sameChain = renderedChain === chain;
+    if (!sameChain) invalidateRows();
     activeChain = chain;
     for (const tab of $('chain-tabs').children) {
       const selected = tab.dataset.chain === chain;
@@ -123,32 +288,46 @@ export function createRecoveryView({ getElement: $, copyText }) {
         revealTab(tab);
       }
     }
+    if (sameChain) return;
+    renderedChain = chain;
     $('address-panel').setAttribute('aria-labelledby', `tab-${chain}`);
     $('chain-description').textContent = chainDetails[chain];
-    renderAddresses($('address-list'), chain, currentResult?.addresses[chain] || []);
+    renderControls();
+    loadAddresses();
   }
   function clear() {
+    addressWorker.stop();
     currentResult = null;
+    currentRows = [];
+    choices = defaultChoices();
+    activeChain = 'btc';
+    renderedChain = null;
     phraseVisible = false;
     $('mnemonic-grid').replaceChildren();
     $('address-list').replaceChildren();
     $('chain-description').textContent = '';
     $('result-state').hidden = true;
-    $('profile-tag').hidden = true;
     $('result-timing').textContent = 'Derived locally';
-    $('result-profile').textContent = '';
+    $('derivation-select').replaceChildren();
+    $('custom-derivation').hidden = true;
+    $('custom-path').value = '';
+    $('address-type').value = 'native';
+    setAddressBusy(false);
+    clearAddressFeedback();
     setRevealButton($('toggle-phrase'), false);
     $('phrase-visibility-note').textContent = 'Hidden from view. Reveal when you are ready.';
   }
   function show(result, seconds) {
+    addressWorker.stop();
     currentResult = result;
+    currentRows = [];
+    choices = defaultChoices(result);
+    activeChain = 'btc';
+    renderedChain = null;
     phraseVisible = false;
     $('progress-state').hidden = true;
     $('empty-state').hidden = true;
     $('result-state').hidden = false;
-    $('profile-tag').hidden = false;
-    $('profile-tag').textContent = result.profile.replace('brainbip-', '').toUpperCase();
-    $('result-profile').textContent = result.profile;
     $('result-timing').textContent = `Derived locally in ${seconds}s`;
     renderMnemonic();
     selectChain(activeChain);
@@ -161,6 +340,59 @@ export function createRecoveryView({ getElement: $, copyText }) {
   });
   $('copy-phrase').addEventListener('click', () => {
     if (currentResult) copyText(currentResult.mnemonic, 'Recovery phrase');
+  });
+  $('derivation-select').addEventListener('change', () => {
+    if (!currentResult) return;
+    const choice = choices[activeChain];
+    const presetId = $('derivation-select').value;
+    invalidateRows();
+    if (presetId === 'custom' && choice.presetId !== 'custom') {
+      const previous = resolveDerivation(activeChain, { presetId: choice.presetId });
+      choice.customPath = previous.path;
+      choice.addressType = previous.addressType || 'native';
+    }
+    choice.presetId = presetId;
+    choice.dirty = presetId === 'custom';
+    choice.rows = presetId === 'standard' ? currentResult.addresses[activeChain] : null;
+    renderControls();
+    loadAddresses();
+  });
+  function editCustomPath() {
+    if (!currentResult) return;
+    const choice = choices[activeChain];
+    invalidateRows();
+    choice.customPath = $('custom-path').value;
+    choice.addressType = $('address-type').value;
+    choice.dirty = true;
+    choice.rows = null;
+    $('derivation-select').querySelector('option[value="custom"]').textContent = 'Custom path…';
+    setAddressStatus('Apply the path to generate addresses.');
+  }
+  $('custom-path').addEventListener('input', editCustomPath);
+  $('custom-path').addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    if (!$('apply-path').disabled) $('apply-path').click();
+  });
+  $('address-type').addEventListener('change', editCustomPath);
+  $('apply-path').addEventListener('click', () => {
+    if (!currentResult) return;
+    const choice = choices[activeChain];
+    invalidateRows();
+    choice.customPath = $('custom-path').value;
+    choice.addressType = $('address-type').value;
+    choice.rows = null;
+    choice.dirty = true;
+    try {
+      resolveDerivation(activeChain, selectionFor(activeChain, choice));
+    } catch (error) {
+      $('custom-path').setAttribute('aria-invalid', 'true');
+      showAddressError(safeAddressError(error));
+      return;
+    }
+    choice.dirty = false;
+    renderControls();
+    loadAddresses();
   });
   $('chain-tabs').addEventListener('click', (event) => {
     const tab = event.target.closest('[data-chain]');
@@ -183,7 +415,7 @@ export function createRecoveryView({ getElement: $, copyText }) {
   $('address-list').addEventListener('click', (event) => {
     const button = event.target.closest('.copy-address');
     if (!button || !currentResult) return;
-    const entry = currentResult.addresses[activeChain][Number(button.dataset.position)];
+    const entry = currentRows[Number(button.dataset.position)];
     if (entry) copyText(entry.address, `${activeChain.toUpperCase()} address`);
   });
 

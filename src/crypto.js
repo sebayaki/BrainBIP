@@ -11,6 +11,7 @@ import { base58, base58check, bech32 } from '@scure/base';
 import Slip10 from 'micro-key-producer/slip10.js';
 import { isUnicodeText, normalizeInputText } from './inputs.js';
 import { PROFILE } from './profiles.js';
+import { DERIVATION_ERROR_MESSAGES, resolveDerivation } from './derivation-paths.js';
 
 export { PROFILE };
 
@@ -22,13 +23,25 @@ const INPUT_ERROR_MESSAGES = new Set([
   'Passphrase and email must contain valid Unicode text.',
   'Enter a valid 12-word English BIP39 phrase.',
   'Address count must be an integer from 1 to 20.',
+  ...Object.values(DERIVATION_ERROR_MESSAGES),
 ]);
 
 // Only our fixed validation messages can leave the worker. Library errors may
 // include inputs or internal state, so their messages are never forwarded.
-export function safeErrorMessage(error) {
+function fixedErrorMessage(error, fallback) {
   if (error instanceof Error && INPUT_ERROR_MESSAGES.has(error.message)) return error.message;
-  return 'Wallet generation failed. WebAssembly support and enough available memory are required.';
+  return fallback;
+}
+
+export function safeErrorMessage(error) {
+  return fixedErrorMessage(
+    error,
+    'Wallet generation failed. WebAssembly support and enough available memory are required.',
+  );
+}
+
+export function safeAddressErrorMessage(error) {
+  return fixedErrorMessage(error, 'Address calculation failed. Try another derivation path.');
 }
 
 export function normalizeInputs(passphrase, email = '') {
@@ -71,11 +84,27 @@ function ethAddress(privateKey) {
   return address;
 }
 
-function btcAddress(publicKey) {
+const bitcoinBase58check = base58check(sha256);
+function btcAddress(publicKey, addressType) {
   const hash = ripemd160(sha256(publicKey));
-  const address = bech32.encode('bc', [0, ...bech32.toWords(hash)]);
-  hash.fill(0);
-  return address;
+  let redeemScript;
+  let scriptHash;
+  let payload;
+  try {
+    if (addressType === 'native') return bech32.encode('bc', [0, ...bech32.toWords(hash)]);
+    if (addressType === 'nested') {
+      // P2SH-P2WPKH: HASH160 of the v0 witness program 0x00 0x14 <key hash>.
+      redeemScript = concatBytes(Uint8Array.of(0, 20), hash);
+      scriptHash = ripemd160(sha256(redeemScript));
+      payload = concatBytes(Uint8Array.of(0x05), scriptHash);
+    } else {
+      // Mainnet P2PKH uses the one-byte 0x00 prefix.
+      payload = concatBytes(Uint8Array.of(0), hash);
+    }
+    return bitcoinBase58check.encode(payload);
+  } finally {
+    for (const bytes of [hash, redeemScript, scriptHash, payload]) bytes?.fill(0);
+  }
 }
 
 const zcashBase58check = base58check(sha256);
@@ -94,10 +123,10 @@ function wipeEdNode(node) {
   node.chainCode?.fill(0);
 }
 
-function derivePath(root, path, wipeNode) {
+function deriveComponents(root, components, wipeNode) {
   let node = root;
   try {
-    for (const component of path.split('/').slice(1)) {
+    for (const component of components) {
       const hardened = component.endsWith("'");
       const index = Number.parseInt(component, 10) + (hardened ? 0x80000000 : 0);
       const child = node.deriveChild(index);
@@ -111,10 +140,13 @@ function derivePath(root, path, wipeNode) {
   }
 }
 
-export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
+function validateAddressCount(count) {
   if (!Number.isInteger(count) || count < 1 || count > PROFILE.addressCount) {
     throw new RangeError('Address count must be an integer from 1 to 20.');
   }
+}
+
+function canonicalizeMnemonic(mnemonic) {
   if (typeof mnemonic !== 'string')
     throw new TypeError('Enter a valid 12-word English BIP39 phrase.');
   const canonicalMnemonic = mnemonic.normalize('NFKD').trim().split(/\s+/u).join(' ');
@@ -124,42 +156,70 @@ export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
   ) {
     throw new Error('Enter a valid 12-word English BIP39 phrase.');
   }
-  const seed = mnemonicToSeedSync(canonicalMnemonic, PROFILE.bip39Passphrase);
-  let secpRoot;
-  let edRoot;
-  const addresses = { btc: [], eth: [], sol: [], zec: [] };
+  return canonicalMnemonic;
+}
+
+function deriveRows(root, chain, derivation, count) {
+  const components = derivation.path.split('/').slice(1);
+  const indexPosition = components.findIndex((component) => component.startsWith('{index}'));
+  const wipeNode = chain === 'sol' ? wipeEdNode : (node) => node.wipePrivateData();
+  const prefix = deriveComponents(root, components.slice(0, indexPosition), wipeNode);
+  const suffix = components.slice(indexPosition);
+  const rows = [];
   try {
-    secpRoot = HDKey.fromMasterSeed(seed);
-    edRoot = Slip10.fromMasterSeed(seed);
     for (let index = 0; index < count; index += 1) {
-      for (const chain of ['btc', 'eth', 'zec']) {
-        const path = PROFILE.paths[chain].replace('{index}', String(index));
-        const child = derivePath(secpRoot, path, (node) => node.wipePrivateData());
-        const privateKey = child.privateKey;
-        const publicKey = child.publicKey;
-        try {
+      const path = derivation.path.replace('{index}', String(index));
+      const child = deriveComponents(
+        prefix,
+        suffix.map((component) => component.replace('{index}', String(index))),
+        wipeNode,
+      );
+      let privateKey;
+      let publicKey;
+      try {
+        if (chain === 'sol') {
+          publicKey = child.publicKeyRaw;
+          rows.push({ index, path, address: base58.encode(publicKey) });
+        } else {
+          privateKey = child.privateKey;
+          publicKey = child.publicKey;
           const address =
             chain === 'btc'
-              ? btcAddress(publicKey)
+              ? btcAddress(publicKey, derivation.addressType)
               : chain === 'eth'
                 ? ethAddress(privateKey)
                 : zecAddress(publicKey);
-          addresses[chain].push({ index, path, address });
-        } finally {
-          privateKey?.fill(0);
-          publicKey?.fill(0);
-          child.wipePrivateData();
+          rows.push({ index, path, address });
         }
-      }
-      const path = PROFILE.paths.sol.replace('{index}', String(index));
-      const child = derivePath(edRoot, path, wipeEdNode);
-      const publicKey = child.publicKeyRaw;
-      try {
-        addresses.sol.push({ index, path, address: base58.encode(publicKey) });
       } finally {
-        publicKey.fill(0);
-        wipeEdNode(child);
+        privateKey?.fill(0);
+        publicKey?.fill(0);
+        wipeNode(child);
       }
+    }
+    return rows;
+  } finally {
+    if (prefix !== root) wipeNode(prefix);
+  }
+}
+
+function deriveAddressGroups(mnemonic, derivations, count) {
+  const canonicalMnemonic = canonicalizeMnemonic(mnemonic);
+  const seed = mnemonicToSeedSync(canonicalMnemonic, PROFILE.bip39Passphrase);
+  let secpRoot;
+  let edRoot;
+  const addresses = {};
+  try {
+    for (const [chain, derivation] of Object.entries(derivations)) {
+      let root;
+      if (chain === 'sol') {
+        edRoot ??= Slip10.fromMasterSeed(seed);
+        root = edRoot;
+      } else {
+        secpRoot ??= HDKey.fromMasterSeed(seed);
+        root = secpRoot;
+      }
+      addresses[chain] = deriveRows(root, chain, derivation, count);
     }
     return addresses;
   } finally {
@@ -167,6 +227,20 @@ export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
     secpRoot?.wipePrivateData();
     if (edRoot) wipeEdNode(edRoot);
   }
+}
+
+export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
+  validateAddressCount(count);
+  const derivations = Object.fromEntries(
+    ['btc', 'eth', 'sol', 'zec'].map((chain) => [chain, resolveDerivation(chain)]),
+  );
+  return deriveAddressGroups(mnemonic, derivations, count);
+}
+
+export function deriveChainAddresses(mnemonic, chain, selection, count = PROFILE.addressCount) {
+  const derivation = resolveDerivation(chain, selection);
+  validateAddressCount(count);
+  return deriveAddressGroups(mnemonic, { [chain]: derivation }, count)[chain];
 }
 
 export async function deriveWallet(passphrase, email = '', onStage = () => {}) {

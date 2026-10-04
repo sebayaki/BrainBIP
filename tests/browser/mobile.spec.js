@@ -4,6 +4,9 @@ import { readFile } from 'node:fs/promises';
 const fixture = JSON.parse(
   await readFile(new URL('../fixtures/brainbip-v2.json', import.meta.url), 'utf8'),
 );
+const pathFixture = JSON.parse(
+  await readFile(new URL('../fixtures/address-presets.json', import.meta.url), 'utf8'),
+);
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 
 test('mobile WebKit keeps controls readable, zoom available, and the layout inside the viewport', async ({
@@ -88,7 +91,7 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
     page.on('console', collectConsoleError);
   }
   await expect(page.locator('#result-state')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('#profile-tag')).toHaveText('V2');
+  await expect(page.locator('#profile-tag')).toHaveCount(0);
   await testInfo.attach('v2-browser-timing', {
     body: await page.locator('#result-timing').textContent(),
     contentType: 'text/plain',
@@ -107,7 +110,16 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
     await expect(page.locator('.address-text')).toHaveText(
       fixture.addresses[chain].map((entry) => entry.address),
     );
+    await expect(page.locator('.address-path').first()).toBeVisible();
   }
+  await expect(page.locator('#address-list details')).toHaveCount(0);
+  expect(
+    await page
+      .locator('#derivation-select')
+      .evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
+  ).toBeGreaterThanOrEqual(16);
+  await page.locator('#derivation-select').focus();
+  expect(await page.evaluate(() => window.visualViewport.scale)).toBe(1);
   for (const width of [320, 390, 430, 390]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -123,12 +135,39 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
       )
       .toBe(true);
     const clipped = await page
-      .locator('.word-value, .address-text')
+      .locator('.word-value, .address-text, .address-path')
       .evaluateAll((elements) =>
         elements.some((element) => element.scrollWidth > element.clientWidth + 1),
       );
     expect(clipped).toBe(false);
   }
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.locator('#tab-eth').click();
+  await page.locator('#derivation-select').selectOption('ledger-live');
+  const ledger = pathFixture.vectors.find(
+    (vector) => vector.chain === 'eth' && vector.selection.presetId === 'ledger-live',
+  );
+  await expect(page.locator('.address-text').first()).toHaveText(
+    ledger.rows.find((row) => row.index === 0).address,
+  );
+  await page.locator('#derivation-select').selectOption('custom');
+  await page.locator('#custom-path').fill("m/44'/60'/7'/0/{index}");
+  await page.locator('#custom-path').focus();
+  expect(await page.evaluate(() => window.visualViewport.scale)).toBe(1);
+  expect(
+    await page
+      .locator('#custom-path')
+      .evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
+  ).toBeGreaterThanOrEqual(16);
+  await page.locator('#apply-path').click();
+  const custom = pathFixture.vectors.find(
+    (vector) => vector.chain === 'eth' && vector.selection.presetId === 'custom',
+  );
+  await expect(page.locator('.address-text').first()).toHaveText(
+    custom.rows.find((row) => row.index === 0).address,
+  );
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 390, height: 844 });
   expect(errors).toEqual([]);
   // Playwright WebKit injects a "body {}" style to synchronize screenshots.
@@ -137,8 +176,8 @@ test('mobile WebKit derives four chains offline and renders full-name tabs witho
   page.off('console', collectConsoleError);
   try {
     await page
-      .locator('#chain-tabs')
-      .screenshot({ path: testInfo.outputPath('webkit-chain-tabs.png') });
+      .locator('#address-panel')
+      .screenshot({ path: testInfo.outputPath('webkit-address-paths.png') });
     await page.screenshot({
       path: testInfo.outputPath('webkit-mobile-addresses.png'),
       fullPage: true,

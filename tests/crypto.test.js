@@ -1,15 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
-import {
-  createHash,
-  createHmac,
-  createECDH,
-  createPrivateKey,
-  createPublicKey,
-  pbkdf2Sync,
-} from 'node:crypto';
-import { argon2id, createSHA256, pbkdf2, keccak } from 'hash-wasm';
+import { pbkdf2Sync } from 'node:crypto';
+import { argon2id, createSHA256, pbkdf2 } from 'hash-wasm';
 import { argon2idAsync as referenceArgon2id } from '@noble/hashes/argon2.js';
 import { entropyToMnemonic, mnemonicToSeedSync } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
@@ -23,177 +16,13 @@ import {
   safeErrorMessage,
 } from '../src/crypto.js';
 import * as profileModule from '../src/profiles.js';
+import { referenceAddresses, referenceMnemonic } from './lib/addresses-reference.js';
 
 const standardMnemonic =
   'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const fixturesDirectory = new URL('./fixtures/', import.meta.url);
 const fixture = async (name) =>
   JSON.parse(await readFile(new URL(name, fixturesDirectory), 'utf8'));
-const hash = (algorithm, data) => createHash(algorithm).update(data).digest();
-const sha256 = (data) => hash('sha256', data);
-const hash160 = (data) => hash('ripemd160', sha256(data));
-const hmac512 = (key, data) => createHmac('sha512', key).update(data).digest();
-const curveOrder = BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141');
-const integer = (bytes) => BigInt('0x' + bytes.toString('hex'));
-const serialize256 = (value) => Buffer.from(value.toString(16).padStart(64, '0'), 'hex');
-
-// Test reference deliberately uses Node/OpenSSL rather than the production
-// noble/scure curve, HMAC, PBKDF2, HD, Base58 or Bech32 implementations.
-function secpPublic(privateKey, compressed = true) {
-  const key = createECDH('secp256k1');
-  key.setPrivateKey(privateKey);
-  return key.getPublicKey(undefined, compressed ? 'compressed' : 'uncompressed');
-}
-
-function referenceSecpKey(seed, path) {
-  let state = hmac512('Bitcoin seed', seed);
-  let privateKey = state.subarray(0, 32);
-  let chainCode = state.subarray(32);
-  for (const component of path.split('/').slice(1)) {
-    const hardened = component.endsWith("'");
-    const index = Number.parseInt(component, 10) + (hardened ? 0x80000000 : 0);
-    const serialIndex = Buffer.alloc(4);
-    serialIndex.writeUInt32BE(index);
-    const data = Buffer.concat([
-      hardened ? Buffer.concat([Buffer.of(0), privateKey]) : secpPublic(privateKey),
-      serialIndex,
-    ]);
-    state = hmac512(chainCode, data);
-    const tweak = integer(state.subarray(0, 32));
-    assert.ok(tweak < curveOrder, 'reference fixture encountered an invalid BIP32 child');
-    const child = (integer(privateKey) + tweak) % curveOrder;
-    assert.ok(child !== 0n, 'reference fixture encountered an invalid BIP32 child');
-    privateKey = serialize256(child);
-    chainCode = state.subarray(32);
-  }
-  return privateKey;
-}
-
-function referenceEdKey(seed, path) {
-  let state = hmac512('ed25519 seed', seed);
-  for (const component of path.split('/').slice(1)) {
-    assert.ok(component.endsWith("'"), 'Ed25519 path must be hardened');
-    const index = Number.parseInt(component, 10) + 0x80000000;
-    const serialIndex = Buffer.alloc(4);
-    serialIndex.writeUInt32BE(index);
-    state = hmac512(
-      state.subarray(32),
-      Buffer.concat([Buffer.of(0), state.subarray(0, 32), serialIndex]),
-    );
-  }
-  return state.subarray(0, 32);
-}
-
-function edPublic(privateKey) {
-  const key = createPrivateKey({
-    key: Buffer.concat([Buffer.from('302e020100300506032b657004220420', 'hex'), privateKey]),
-    format: 'der',
-    type: 'pkcs8',
-  });
-  return createPublicKey(key).export({ format: 'der', type: 'spki' }).subarray(-32);
-}
-
-function referenceBase58(bytes) {
-  const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-  let value = integer(bytes);
-  let result = '';
-  while (value > 0n) {
-    result = alphabet[Number(value % 58n)] + result;
-    value /= 58n;
-  }
-  for (const byte of bytes) {
-    if (byte !== 0) break;
-    result = '1' + result;
-  }
-  return result;
-}
-
-function referenceBech32(hashBytes) {
-  const alphabet = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
-  const words = [0]; // Witness version 0.
-  let accumulator = 0;
-  let bits = 0;
-  for (const byte of hashBytes) {
-    accumulator = (accumulator << 8) | byte;
-    bits += 8;
-    while (bits >= 5) {
-      bits -= 5;
-      words.push((accumulator >>> bits) & 31);
-    }
-  }
-  if (bits > 0) words.push((accumulator << (5 - bits)) & 31);
-  const generators = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
-  let checksum = 1;
-  // HRP expand("bc") followed by data and six zero checksum words.
-  for (const word of [3, 3, 0, 2, 3, ...words, 0, 0, 0, 0, 0, 0]) {
-    const high = checksum >>> 25;
-    checksum = ((checksum & 0x1ffffff) << 5) ^ word;
-    generators.forEach((generator, index) => {
-      if ((high >>> index) & 1) checksum ^= generator;
-    });
-  }
-  checksum ^= 1;
-  const checkWords = Array.from({ length: 6 }, (_, index) => (checksum >>> (5 * (5 - index))) & 31);
-  return 'bc1' + [...words, ...checkWords].map((word) => alphabet[word]).join('');
-}
-
-function referenceMnemonic(entropy) {
-  const bitString = [...entropy].map((byte) => byte.toString(2).padStart(8, '0')).join('');
-  const checksum = sha256(entropy)[0].toString(2).padStart(8, '0').slice(0, 4);
-  const combined = bitString + checksum;
-  return Array.from(
-    { length: 12 },
-    (_, index) => wordlist[Number.parseInt(combined.slice(index * 11, index * 11 + 11), 2)],
-  ).join(' ');
-}
-
-async function referenceAddresses(mnemonic, count = 20) {
-  const seed = pbkdf2Sync(
-    Buffer.from(mnemonic.normalize('NFKD')),
-    Buffer.from('mnemonic'),
-    2048,
-    64,
-    'sha512',
-  );
-  const addresses = { btc: [], eth: [], sol: [], zec: [] };
-  for (let index = 0; index < count; index += 1) {
-    const btcPath = `m/84'/0'/0'/0/${index}`;
-    const ethPath = `m/44'/60'/0'/0/${index}`;
-    const solPath = `m/44'/501'/${index}'/0'`;
-    const zecPath = `m/44'/133'/0'/0/${index}`;
-    addresses.btc.push({
-      index,
-      path: btcPath,
-      address: referenceBech32(hash160(secpPublic(referenceSecpKey(seed, btcPath)))),
-    });
-    const ethKey = referenceSecpKey(seed, ethPath);
-    const lower = (await keccak(secpPublic(ethKey, false).subarray(1), 256)).slice(-40);
-    const checksum = await keccak(Buffer.from(lower), 256);
-    const ethAddress =
-      '0x' +
-      [...lower]
-        .map((character, offset) =>
-          Number.parseInt(checksum[offset], 16) >= 8 ? character.toUpperCase() : character,
-        )
-        .join('');
-    addresses.eth.push({ index, path: ethPath, address: ethAddress });
-    addresses.sol.push({
-      index,
-      path: solPath,
-      address: referenceBase58(edPublic(referenceEdKey(seed, solPath))),
-    });
-    const payload = Buffer.concat([
-      Buffer.from('1cb8', 'hex'),
-      hash160(secpPublic(referenceSecpKey(seed, zecPath))),
-    ]);
-    const zecAddress = referenceBase58(
-      Buffer.concat([payload, sha256(sha256(payload)).subarray(0, 4)]),
-    );
-    addresses.zec.push({ index, path: zecPath, address: zecAddress });
-  }
-  return addresses;
-}
-
 // Explicit maintainer-only fixture generation. This derives public test data
 // through separate implementations; normal test runs never rewrite fixtures.
 if (process.env.BRAINBIP_GENERATE_FIXTURE === '1') {

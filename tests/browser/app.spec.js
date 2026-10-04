@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 const fixture = JSON.parse(
   await readFile(new URL('../fixtures/brainbip-v2.json', import.meta.url), 'utf8'),
 );
+const pathFixture = JSON.parse(
+  await readFile(new URL('../fixtures/address-presets.json', import.meta.url), 'utf8'),
+);
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
 
@@ -33,6 +36,8 @@ async function assertAllAddresses(page) {
     await expect(page.locator('#address-list tr')).toHaveCount(20);
     await expect(page.locator('.address-text')).toHaveText(rows.map((entry) => entry.address));
     await expect(page.locator('.address-path')).toHaveText(rows.map((entry) => entry.path));
+    await expect(page.locator('.address-path').first()).toBeVisible();
+    await expect(page.locator('#address-list details')).toHaveCount(0);
   }
 }
 
@@ -354,8 +359,8 @@ test('the fixed derivation reports real stages and clears results on reset', asy
     .locator('#output-panel')
     .screenshot({ path: testInfo.outputPath('desktop-cpu-progress.png') });
   await expect(page.locator('#result-state')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('#profile-tag')).toHaveText('V2');
-  await expect(page.locator('#result-profile')).toHaveText('brainbip-v2');
+  await expect(page.locator('#profile-tag')).toHaveCount(0);
+  await expect(page.locator('#result-profile')).toHaveCount(0);
   await testInfo.attach('v2-browser-timing', {
     body: await page.locator('#result-timing').textContent(),
     contentType: 'text/plain',
@@ -371,4 +376,105 @@ test('the fixed derivation reports real stages and clears results on reset', asy
   await page.locator('#reset-button').click();
   await expect(page.locator('#result-state')).toBeHidden();
   await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
+});
+
+test('path presets and custom paths update addresses without deriving new recovery words', async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.testWalletJobs = 0;
+    window.Worker = class extends NativeWorker {
+      postMessage(data, ...rest) {
+        if ('passphrase' in data && !('privateEmail' in data)) window.testWalletJobs += 1;
+        return super.postMessage(data, ...rest);
+      }
+    };
+  });
+  await page.goto('/');
+  await enterFixture(page);
+  await generate(page);
+  await page.locator('#toggle-phrase').click();
+  expect(pathFixture.mnemonic).toBe(fixture.mnemonic);
+  for (const vector of pathFixture.vectors) {
+    await page.locator('#tab-' + vector.chain).click();
+    await page.locator('#derivation-select').selectOption(vector.selection.presetId);
+    if (vector.selection.presetId === 'custom') {
+      await page.locator('#custom-path').fill(vector.selection.customPath);
+      if (vector.chain === 'btc')
+        await page.locator('#address-type').selectOption(vector.selection.addressType);
+      if (vector.chain === 'eth') await page.locator('#custom-path').press('Enter');
+      else await page.locator('#apply-path').click();
+    }
+    await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'false');
+    await expect(page.locator('#address-list tr')).toHaveCount(20);
+    for (const row of vector.rows) {
+      await expect(page.locator('.address-text').nth(row.index)).toHaveText(row.address);
+      await expect(page.locator('.address-path').nth(row.index)).toHaveText(row.path);
+    }
+    await expect(page.locator('.address-path').first()).toBeVisible();
+    await expect(page.locator('#address-list details')).toHaveCount(0);
+    await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(
+      fixture.mnemonic.split(' '),
+    );
+  }
+  await page.locator('#tab-eth').click();
+  await page.locator('#derivation-select').selectOption('custom');
+  await page.locator('#custom-path').fill("m/44'/60'/2147483648/0/{index}");
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
+  await page.locator('#apply-path').click();
+  await expect(page.locator('#address-error')).toBeVisible();
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await page.locator('#derivation-select').selectOption('ledger-live');
+  await expect(page.locator('#address-list tr')).toHaveCount(20);
+  await expect(page.locator('#address-error')).toBeHidden();
+  await page.locator('#tab-btc').click();
+  await page.locator('#tab-eth').click();
+  await expect(page.locator('#derivation-select')).toHaveValue('ledger-live');
+  await expect(page.locator('.address-path').nth(1)).toHaveText("m/44'/60'/1'/0/0");
+  expect(await page.evaluate(() => window.testWalletJobs)).toBe(1);
+  await page
+    .locator('#address-panel')
+    .screenshot({ path: testInfo.outputPath('desktop-address-paths.png') });
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
+  await expect(page.locator('#custom-path')).toHaveValue('');
+});
+
+test('a superseded or reset address job cannot restore stale addresses', async ({ page }) => {
+  await page.addInitScript((rows) => {
+    const NativeWorker = window.Worker;
+    window.testAddressReplies = [];
+    window.Worker = class extends NativeWorker {
+      postMessage(data, ...rest) {
+        if (data.mnemonic && data.chain) {
+          const callback = this.onmessage;
+          window.testAddressReplies.push(() =>
+            callback({ data: { id: data.id, type: 'result', rows } }),
+          );
+          return;
+        }
+        return super.postMessage(data, ...rest);
+      }
+    };
+  }, fixture.addresses.eth);
+  await page.goto('/');
+  await enterFixture(page);
+  await generate(page);
+  await page.locator('#tab-eth').click();
+  await page.locator('#derivation-select').selectOption('ledger-live');
+  await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
+  await page.locator('#derivation-select').selectOption('ledger-legacy');
+  await expect.poll(() => page.evaluate(() => window.testAddressReplies.length)).toBe(2);
+  await page.evaluate(() => window.testAddressReplies[0]());
+  await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'true');
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
+  await page.locator('#reset-button').click();
+  await page.evaluate(() => window.testAddressReplies[1]());
+  await expect(page.locator('#result-state')).toBeHidden();
+  await expect(page.locator('#address-list tr')).toHaveCount(0);
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
+  await expect(page.locator('#address-panel')).toHaveAttribute('aria-busy', 'false');
 });
