@@ -37,7 +37,8 @@ const workerPlugin = {
 const result = await build({ ...config, entryPoints: ['src/app.js'], plugins: [workerPlugin] });
 Object.keys(result.metafile.inputs).forEach((input) => usedInputs.add(input));
 const script = result.outputFiles[0].text;
-const styleResult = await build({ ...config, entryPoints: ['src/styles.css'] });
+const styleResult = await build({ ...config, entryPoints: ['src/styles.css'], loader: { '.woff2': 'dataurl' } });
+Object.keys(styleResult.metafile.inputs).forEach((input) => usedInputs.add(input));
 const styles = styleResult.outputFiles[0].text;
 if (/<\/script/i.test(script) || /<\/style/i.test(styles)) throw new Error('Unsafe inline asset boundary.');
 
@@ -71,6 +72,7 @@ for (const filename of ['argon2.c', 'blake2b.c', 'sha256.c', 'sha512.c']) {
   notices += `hash-wasm/src/${filename}\n${leadingNotice.trim()}\n\n`;
 }
 notices += `Go crypto (upstream of the hash-wasm Argon2 implementation)\nSource: https://github.com/golang/crypto\n${await readFile(path.join(root, 'licenses/Go-LICENSE'), 'utf8')}\n`;
+notices += `Monero English mnemonic wordlist\nSource: https://github.com/monero-project/monero/blob/master/src/mnemonics/english.h\n${await readFile(path.join(root, 'licenses/Monero-LICENSE'), 'utf8')}\n`;
 notices += '\nBLAKE2 reference implementation: the CC0 license option is used.\nhttps://creativecommons.org/publicdomain/zero/1.0/\n';
 notices += '\nEnglish frequency data from OpenSubtitles 2024 via OPUS / Helsinki-NLP is licensed under ODC-BY 1.0.\nLicense: https://opendatacommons.org/licenses/by/1-0/\nSource: https://opus.nlpl.eu/\n';
 const escapeHTML = (text) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
@@ -78,7 +80,7 @@ const hash = (text, encoding = 'base64') => createHash('sha256').update(text).di
 const csp = [
   "default-src 'none'", "base-uri 'none'", "form-action 'none'", "object-src 'none'",
   `script-src 'sha256-${hash(script)}' 'wasm-unsafe-eval'`,
-  `style-src 'sha256-${hash(styles)}'`, "worker-src blob:", "img-src data:", "connect-src 'none'",
+  `style-src 'sha256-${hash(styles)}'`, "worker-src blob:", "img-src data:", "font-src data:", "connect-src 'none'",
 ].join('; ');
 let template = await readFile(path.join(root, 'src/index.html'), 'utf8');
 for (const [marker, content] of [

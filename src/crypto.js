@@ -9,6 +9,7 @@ import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { HDKey } from '@scure/bip32';
 import { base58, base58check, bech32 } from '@scure/base';
 import Slip10 from 'micro-key-producer/slip10.js';
+import { deriveMoneroWallet, MONERO_PROFILE } from './monero.js';
 
 export const PROFILE = Object.freeze({
   id: 'brainbip-v1',
@@ -37,6 +38,7 @@ export const PROFILE = Object.freeze({
     eth: "m/44'/60'/0'/0/{index}",
     sol: "m/44'/501'/{index}'/0'",
     zec: "m/44'/133'/0'/0/{index}",
+    xmr: MONERO_PROFILE.path,
   }),
 });
 
@@ -133,7 +135,7 @@ function derivePath(root, path, wipeNode) {
   }
 }
 
-export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
+function deriveWalletMaterial(mnemonic, count = PROFILE.addressCount) {
   if (!Number.isInteger(count) || count < 1 || count > PROFILE.addressCount) {
     throw new RangeError('Address count must be an integer from 1 to 20.');
   }
@@ -176,12 +178,18 @@ export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
         wipeEdNode(child);
       }
     }
-    return addresses;
+    const monero = deriveMoneroWallet(seed, count);
+    addresses.xmr = monero.addresses;
+    return { addresses, recovery: { xmr: monero.recovery } };
   } finally {
     seed.fill(0);
     secpRoot?.wipePrivateData();
     if (edRoot) wipeEdNode(edRoot);
   }
+}
+
+export function deriveAddresses(mnemonic, count = PROFILE.addressCount) {
+  return deriveWalletMaterial(mnemonic, count).addresses;
 }
 
 export async function deriveWallet(passphrase, email = '', onStage = () => {}) {
@@ -219,7 +227,7 @@ export async function deriveWallet(passphrase, email = '', onStage = () => {}) {
     entropy = mixed.slice(0, PROFILE.entropyBytes);
     const mnemonic = entropyToMnemonic(entropy, wordlist);
     onStage('addresses');
-    return { mnemonic, addresses: deriveAddresses(mnemonic), profile: PROFILE.id };
+    return { mnemonic, ...deriveWalletMaterial(mnemonic), profile: PROFILE.id };
   } finally {
     for (const buffer of [password, emailBytes, argonSalt, pbkdfSalt, argonKey, pbkdfKey, mixed, entropy]) {
       buffer?.fill(0);

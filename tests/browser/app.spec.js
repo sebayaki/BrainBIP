@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const fixture = JSON.parse(await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'));
+const moneroFixture = JSON.parse(await readFile(new URL('../fixtures/monero-ledger-v1.json', import.meta.url), 'utf8')).vectors.find((vector) => vector.id === 'brainbip-v1-public');
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
 
@@ -18,11 +19,12 @@ async function generate(page) {
 }
 
 async function assertAllAddresses(page) {
-  for (const chain of ['btc', 'eth', 'sol', 'zec']) {
+  for (const chain of ['btc', 'eth', 'sol', 'zec', 'xmr']) {
+    const rows = chain === 'xmr' ? moneroFixture.addresses : fixture.addresses[chain];
     await page.locator(`#tab-${chain}`).click();
     await expect(page.locator('#address-list tr')).toHaveCount(20);
-    await expect(page.locator('.address-text')).toHaveText(fixture.addresses[chain].map((entry) => entry.address));
-    await expect(page.locator('.address-path')).toHaveText(fixture.addresses[chain].map((entry) => entry.path));
+    await expect(page.locator('.address-text')).toHaveText(rows.map((entry) => entry.address));
+    await expect(page.locator('.address-path')).toHaveText(rows.map((entry) => entry.path));
   }
 }
 
@@ -44,9 +46,9 @@ test('hosted edition computes the full profile offline, shows all addresses, and
   await enterFixture(page);
   await expect(page.locator('#strength-bits')).not.toHaveText('—', { timeout: 15_000 });
   await generate(page);
-  await expect(page.locator('.word-value').first()).toHaveText('••••••');
+  await expect(page.locator('#mnemonic-grid .word-value').first()).toHaveText('••••••');
   await page.locator('#toggle-phrase').click();
-  await expect(page.locator('.word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
   await assertAllAddresses(page);
   await page.locator('#tab-btc').click();
   await page.locator('#tab-btc').press('ArrowRight');
@@ -56,7 +58,7 @@ test('hosted edition computes the full profile offline, shows all addresses, and
   await expect.poll(() => page.evaluate(() => window.testCopies)).toEqual([fixture.mnemonic, fixture.addresses.eth[0].address]);
   await page.screenshot({ path: testInfo.outputPath('desktop-result.png'), fullPage: true });
   await page.locator('#toggle-phrase').click();
-  await expect(page.locator('.word-value').first()).toHaveText('••••••');
+  await expect(page.locator('#mnemonic-grid .word-value').first()).toHaveText('••••••');
   await expect(page.locator('#mnemonic-grid')).not.toContainText(fixture.mnemonic.split(' ')[0]);
   await page.locator('#email').fill('changed@example.invalid');
   await expect(page.locator('#result-state')).toBeHidden();
@@ -85,7 +87,7 @@ test('single file runs without a server or network at a mobile viewport', async 
   await enterFixture(page);
   await generate(page);
   await page.locator('#toggle-phrase').click();
-  await expect(page.locator('.word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
   await assertAllAddresses(page);
   await page.screenshot({ path: testInfo.outputPath('mobile-result.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -115,7 +117,7 @@ test('cancel, input edits, and reset discard pending computations', async ({ pag
   await enterFixture(page);
   await generate(page);
   await page.locator('#toggle-phrase').click();
-  await expect(page.locator('.word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
 });
 
 test('offline download contains pristine build bytes, never the current form', async ({ page }) => {
@@ -192,4 +194,62 @@ test('long input is rejected explicitly instead of silently truncated into anoth
   const unicode = '😀'.repeat(600);
   await page.locator('#passphrase').fill(unicode);
   await expect(page.locator('#passphrase')).toHaveValue(unicode);
+});
+
+test('private email is opt-in, updates only the estimate, and resets off', async ({ page }) => {
+  await page.goto('/');
+  const toggle = page.getByRole('switch', { name: 'This email is private' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await page.locator('#passphrase').fill('correct horse battery staple');
+  await page.locator('#email').fill('nebular.zeppelin.741@example.invalid');
+  await expect(page.locator('#strength-bits')).not.toHaveText('—');
+  const baseBits = Number(await page.locator('#strength-bits').textContent());
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(async () => Number(await page.locator('#strength-bits').textContent())).toBeGreaterThan(baseBits);
+  await expect(page.locator('#strength-detail')).toContainText('assumed');
+  await generate(page);
+  await page.locator('#toggle-phrase').click();
+  const originalWords = await page.locator('#mnemonic-grid .word-value').allTextContents();
+  await toggle.click();
+  await expect(page.locator('#result-state')).toBeVisible();
+  await expect(page.locator('#strength-bits')).toHaveText(String(baseBits));
+  await generate(page);
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(originalWords);
+  await toggle.click();
+  await page.locator('#reset-button').click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+});
+
+test('Monero recovery is hidden by default and cleared after closing, switching, or reset', async ({ page }) => {
+  await page.goto('/');
+  await enterFixture(page);
+  await generate(page);
+  await expect(page.locator('#monero-recovery-panel')).toBeHidden();
+  await page.locator('#tab-xmr').click();
+  await expect(page.locator('#address-list tr')).toHaveCount(20);
+  await expect(page.locator('.address-path-details summary').first()).toHaveText('Primary · 0 / 0');
+  await expect(page.locator('.address-path-details summary').last()).toHaveText('Subaddress · 0 / 19');
+  await page.locator('#monero-recovery-details > summary').click();
+  const words = page.locator('#monero-mnemonic-grid .word-value');
+  await expect(words).toHaveCount(25);
+  await expect(words.first()).toHaveText('••••••');
+  await page.locator('#toggle-monero-phrase').click();
+  await expect(words).toHaveText(moneroFixture.recovery.mnemonic.split(' '));
+  for (const width of [320, 390, 900, 1081, 1280]) {
+    await page.setViewportSize({ width, height: 1000 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const clipped = await page.locator('.word-value, .address-text').evaluateAll((elements) => elements.some((element) => element.scrollWidth > element.clientWidth + 1));
+    expect(clipped).toBe(false);
+  }
+  await page.locator('#monero-recovery-details > summary').click();
+  await expect(words.first()).toHaveText('••••••');
+  await page.locator('#monero-recovery-details > summary').click();
+  await page.locator('#toggle-monero-phrase').click();
+  await page.locator('#tab-btc').click();
+  await expect(words.first()).toHaveText('••••••');
+  await expect(page.locator('#monero-recovery-panel')).toBeHidden();
+  await page.locator('#reset-button').click();
+  await expect(words).toHaveCount(0);
 });

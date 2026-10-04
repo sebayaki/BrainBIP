@@ -1,6 +1,6 @@
 # BrainBIP v1 derivation and recovery specification
 
-Profile identifier: **`brainbip-v1`**. This document specifies the complete deterministic mapping from inputs to a 12-word mnemonic and public addresses. Changing normalization, byte encoding, a salt prefix, KDF parameters, output mixing, the BIP39 passphrase, a derivation path, or an address format requires a new profile identifier. V1 never reduces its costs according to the input, device, available memory, or execution time.
+Profile identifier: **`brainbip-v1`**. This document specifies the deterministic mapping from inputs to a 12-word mnemonic and public addresses. The original BTC/ETH/SOL/ZEC outputs remain unchanged. Monero is an additive extension with the fixed mapping identifier **`ledger-bip39-v1`**. Changing normalization, byte encoding, a salt prefix, KDF parameters, output mixing, the BIP39 passphrase, an existing derivation path, or an existing address format requires a new profile identifier. V1 never reduces its costs according to the input, device, available memory, or execution time.
 
 BrainBIP v1 is a custom brain-wallet construction. Its output follows BIP39, but its passphrase-to-entropy construction is not BIP39, WarpWallet, or a standardized recovery scheme. A valid 12-word output does not establish 128 bits of security: resistance to guessing depends on the original inputs. A salt prevents shared precomputation; an email address is not assumed to be secret or unpredictable. This application and this construction have not received an independent security audit.
 
@@ -67,7 +67,7 @@ seed = PBKDF2-HMAC-SHA512(
 )
 ```
 
-The input brain-wallet passphrase is already used in step 2; it is not entered again as a BIP39 additional passphrase. The generated 12 words therefore suffice to recover the specified HD keys in a compatible external wallet, using the matching derivation paths. The email is unnecessary when restoring from the generated words.
+The input brain-wallet passphrase is already used in step 2; it is not entered again as a BIP39 additional passphrase. The generated 12 words therefore reproduce the specified HD keys when the wallet implements the exact chain mapping. The email is unnecessary when restoring from the generated words. Standard Monero seed import requires the separate 25-word phrase described below.
 
 The `deriveAddresses` API accepts twelve valid English BIP39 words and canonicalizes surrounding/separating whitespace before deriving this seed. It does not lowercase words or accept a different BIP39 passphrase.
 
@@ -81,8 +81,9 @@ The application derives indexes **0 through 19**, displayed as positions 1 throu
 | Ethereum | secp256k1, BIP32/BIP44 | `m/44'/60'/0'/0/i` | 20-byte `0x…` address with EIP55 checksum |
 | Solana | Ed25519, SLIP-0010 | `m/44'/501'/i'/0'` | Base58 of the raw 32-byte Ed25519 public key |
 | Zcash mainnet | secp256k1, BIP32/BIP44 | `m/44'/133'/0'/0/i` | Transparent P2PKH `t1…` |
+| Monero mainnet | Ledger BIP32 secp256k1 mapping to Edwards25519 scalars | `m/44'/128'/0'/0/0`; Monero account `0`, subaddress `i` | Primary `4…` at `i = 0`; subaddresses `8…` at `i = 1…19` |
 
-BTC, ETH, and ZEC increment the final **address index within account 0**. SOL increments a **hardened account index**. These are twenty addresses per network, rather than twenty BIP44 accounts on every network.
+BTC, ETH, and ZEC increment the final **address index within account 0**. SOL increments a **hardened account index**. XMR increments a **Monero subaddress index within one wallet and account**, without changing its BIP32 path. These are twenty addresses per network, rather than twenty BIP44 accounts on every network. XMR outputs include `account: 0` and `subaddress: i` in addition to `index`, `path`, and `address`.
 
 Address encoding is precise:
 
@@ -91,7 +92,33 @@ Address encoding is precise:
 - **SOL:** Derive only hardened SLIP-0010 children using the master HMAC label `ed25519 seed`. Base58-encode the Ed25519 public key's raw 32 bytes. The SLIP-0010 serialization prefix `00` must not be included.
 - **ZEC:** HASH160 of the compressed secp256k1 public key; prepend the two bytes `1c b8`; append the first four bytes of double-SHA256(payload); Base58-encode the result. These addresses provide no shielded receiver, Sapling/Orchard keys, or Unified Address.
 
-No private key, extended key, transaction, balance, or network query forms part of the returned result.
+### Monero extension: `ledger-bip39-v1`
+
+Start from the same 64-byte BIP39 seed, using an empty additional BIP39 passphrase. Derive the **secp256k1 BIP32 private child** at `m/44'/128'/0'/0/0`. Hash its 32 private-key bytes using Keccak256. Interpret the hash as a little-endian integer and reduce modulo the Edwards25519 subgroup order `l = 2^252 + 27742317777372353535851937790883648493`; this is the private spend scalar `b`. Encode `b` in 32 little-endian bytes, hash those bytes with Keccak256, and reduce in the same way to obtain the private view scalar `a`. A zero spend or view scalar is rejected without changing the mapping.
+
+Derive public keys by raw scalar multiplication `B = bG` and `A = aG` on Edwards25519. **Do not use EdDSA seed hashing or clamping**, such as `ed25519.getPublicKey(seed)`: that produces different keys. This mapping follows Ledger's published implementation and is distinct from Trezor's SLIP-0010 Ed25519 mapping.
+
+For the primary address `(major, minor) = (0, 0)`, use the mainnet prefix byte `12` in hexadecimal (decimal 18), followed by `B` and `A`, each in 32-byte compressed point encoding. For minor indexes `i = 1…19`, compute:
+
+```
+m = Hs(UTF8("SubAddr\0") || LE256(a) || LE32(0) || LE32(i))
+D = B + mG
+C = aD
+```
+
+Here `Hs` means Keccak256 interpreted little-endian and reduced modulo `l`; `LE256(a)` is the **32-byte** scalar encoding, while `LE32(index)` is a **four-byte** unsigned integer. The domain string ends in one zero byte. Subaddress payloads are hexadecimal prefix `2a` (decimal 42), followed by compressed `D` and `C`. In either case, append the first four bytes of Keccak256(payload), then encode with **Monero's fixed-block Base58**, not Bitcoin Base58Check.
+
+Generate the native **25-word English legacy Monero mnemonic** from the 32-byte reduced spend scalar `b`. Using the official 1,626-word ordered English list, read eight four-byte little-endian integers `x`. For each, with `n = 1626`, select:
+
+```
+w1 = x mod n
+w2 = (floor(x / n) + w1) mod n
+w3 = (floor(floor(x / n) / n) + w2) mod n
+```
+
+This produces 24 words. Concatenate each word's first three ASCII characters, calculate ordinary CRC32/IEEE, and append the word at checksum index `CRC32 mod 24`. The phrase encodes the spend key directly; it is not BIP39 and adds no entropy. It restores the same Monero primary address and subaddresses in compatible legacy-seed wallets, with an empty Monero seed-offset passphrase.
+
+The result includes `recovery.xmr = { mnemonic, mapping: 'ledger-bip39-v1', path: "m/44'/128'/0'/0/0" }`. The 25-word mnemonic is secret recovery material, just like the BIP39 phrase. No raw private key, extended key, transaction, balance, or network query forms part of the returned result.
 
 ## 5. Interoperability and recovery
 
@@ -99,11 +126,17 @@ The BTC/ETH/SOL paths match Phantom's documented `bip44Change` grouping. ETH als
 
 For BTC, restore account 0 with BIP84 Native SegWit. For ETH, use the documented software-wallet BIP44 path and create successive accounts as needed to reach the corresponding address index. For SOL, use the explicit four-level hardened path shown above. For ZEC, restoration requires a wallet supporting BIP39/BIP44 transparent keys at the stated path; shielded-only restoration is a different scheme. Address discovery limits and unused-address gaps in external wallets may require an explicit path or index.
 
+For XMR, standard Monero GUI/CLI recovery does **not** import the twelve BIP39 words. Restore from the generated **25-word Monero legacy phrase**, leaving the seed-offset passphrase empty. A wallet-file password protects that wallet file and is unrelated to the original BrainBIP passphrase. Set a restore height or date at or before the first incoming transaction; a later height can miss funds. Account `0`, subaddresses `0…19` identify the shown addresses. Native Monero recovery preserves the wallet's keys and subaddresses, but not labels or other local wallet metadata. Verify the primary address after recovery. This 25-word phrase cannot restore BTC, ETH, SOL, or ZEC. Restoring the BIP39 phrase directly is possible only through a wallet supporting this exact Ledger mapping, and must not be assumed compatible with Trezor's different Monero derivation.
+
+The private-email UI switch is **off by default and affects strength estimates only**. Both positions use identical normalization, email salt, KDF parameters, mnemonic, and addresses. Public-email strength credit is zero; any private-email credit is conditional on the user's unverified secrecy and independence assumption.
+
 Recovering from the original passphrase and email also requires this exact **v1 profile**. Keep a copy of this public specification or the verified offline release; neither is a secret. Future parameter changes must retain v1 recovery support or publish a separate release that implements it.
 
 ## 6. Test vectors and execution lifecycle
 
 `tests/fixtures/brainbip-v1.json` is a **public, full-cost v1 test vector** including raw and normalized inputs, salts, intermediate outputs, mnemonic, BIP39 seed, and eighty addresses. **Never deposit funds to addresses derived from test vectors.** Its Argon2 output was generated with the independent noble-hashes JavaScript implementation; the normal test suite checks the hash-wasm production implementation against it. PBKDF2 and HD/address fixtures are independently checked with Node/OpenSSL and separate test encoders.
+
+That original fixture remains unchanged. `tests/fixtures/monero-ledger-v1.json` records separate Monero extension vectors for the published Ledger test mnemonic and the original BrainBIP example. The official Ledger public-key and stagenet-address vectors verify the BIP39-to-Monero mapping. Both generated 25-word phrases were restored independently using **monero-ts 0.11.3's Monero C++ WebAssembly implementation**, with networking disabled; the native phrases round-tripped exactly and all twenty mainnet addresses per wallet matched. This includes primary index `0` and subaddress indexes `1…19`. Fixture provenance identifies the reference binary; the native reference is a verification tool, not a production dependency.
 
 The test suite also includes published Argon2 reference, BIP39, BIP32, SLIP-0010 and BIP84 vectors. Fixture generation is an explicit maintainer operation; ordinary tests never rewrite expected values.
 
@@ -120,4 +153,9 @@ Each generation runs in a fresh worker. It reports the stages `argon2id`, `pbkdf
 - [Phantom derivation paths](https://help.phantom.com/articles/12988493966227)
 - [MetaMask recovery-phrase paths](https://support.metamask.io/configure/wallet/importing-a-seed-phrase-from-another-wallet-software-derivation-path/)
 - [Zcash protocol specification](https://zips.z.cash/protocol/protocol.pdf)
+- [Ledger Monero key derivation](https://github.com/LedgerHQ/app-monero/blob/develop/src/monero_init.c) and [published Ledger tests](https://github.com/LedgerHQ/app-monero/blob/develop/tests/test_crypto.py)
+- [Monero standard addresses](https://docs.getmonero.org/public-address/standard-address/) and [subaddresses](https://docs.getmonero.org/public-address/subaddress/)
+- [Monero legacy mnemonic encoding](https://github.com/monero-project/monero/blob/master/src/mnemonics/electrum-words.cpp) and [English wordlist](https://github.com/monero-project/monero/blob/master/src/mnemonics/english.h)
+- [Monero mnemonic recovery](https://www.getmonero.org/resources/user-guides/restore_account.html) and [Trezor Monero derivation compatibility](https://trezor.io/learn/supported-assets/other-cryptocurrencies/what-is-monero-and-how-does-it-work-with-trezor)
+- [monero-ts native Monero WebAssembly reference](https://github.com/woodser/monero-ts)
 - [hash-wasm implementation](https://github.com/Daninet/hash-wasm)

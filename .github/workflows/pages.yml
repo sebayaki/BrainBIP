@@ -42,8 +42,8 @@ jobs:
         run: npm ci
       - name: Check vectors and standalone build
         run: npm run check
-      - name: Install test browser
-        run: npx playwright install --with-deps chromium
+      - name: Install test browsers
+        run: npx playwright install --with-deps chromium webkit
       - name: Verify browser and offline behavior
         run: npm run test:browser
       - name: Configure Pages

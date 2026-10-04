@@ -13,6 +13,7 @@ const chainDetails = {
   eth: 'Ethereum · Receiving accounts · BIP44',
   sol: 'Solana · Ed25519 receiving accounts · hardened derivation',
   zec: 'Zcash · Transparent P2PKH addresses · no shielded privacy',
+  xmr: 'Monero · One primary address + 19 subaddresses · Account 0',
 };
 let walletTask = null;
 let strengthTask = null;
@@ -21,11 +22,21 @@ let strengthTimer = null;
 let toastTimer = null;
 let currentResult = null;
 let phraseVisible = false;
+let moneroPhraseVisible = false;
 let activeChain = 'btc';
 let startedAt = 0;
 let uiRevision = 0;
 
 if (location.protocol === 'file:') $('offline-link').hidden = true;
+
+function privateEmailEnabled() {
+  return privateEmailInput.getAttribute('aria-checked') === 'true';
+}
+
+function setPrivateEmail(enabled) {
+  privateEmailInput.setAttribute('aria-checked', String(enabled));
+  $('private-email-state').textContent = enabled ? 'On' : 'Off';
+}
 
 function makeWorker(source, id) {
   const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
@@ -70,7 +81,13 @@ function clearResults() {
   uiRevision += 1;
   currentResult = null;
   phraseVisible = false;
+  moneroPhraseVisible = false;
   $('mnemonic-grid').replaceChildren();
+  $('monero-mnemonic-grid').replaceChildren();
+  $('monero-recovery-panel').hidden = true;
+  $('monero-recovery-details').open = false;
+  $('toggle-monero-phrase').textContent = 'Reveal';
+  $('toggle-monero-phrase').setAttribute('aria-pressed', 'false');
   $('address-list').replaceChildren();
   $('chain-description').textContent = '';
   $('result-state').hidden = true;
@@ -138,6 +155,29 @@ function makeCopyIcon() {
   return svg;
 }
 
+function renderMoneroMnemonic() {
+  const grid = $('monero-mnemonic-grid');
+  grid.replaceChildren();
+  grid.dataset.visible = String(moneroPhraseVisible);
+  const mnemonic = currentResult?.recovery?.xmr?.mnemonic;
+  if (!mnemonic) return;
+  grid.setAttribute('aria-label', moneroPhraseVisible ? 'Twenty-five Monero recovery words' : 'Monero recovery phrase hidden');
+  for (const [index, word] of mnemonic.split(' ').entries()) {
+    const card = document.createElement('li');
+    const number = document.createElement('span');
+    number.className = 'word-number';
+    number.textContent = String(index + 1).padStart(2, '0');
+    const value = document.createElement('span');
+    value.className = 'word-value';
+    value.textContent = moneroPhraseVisible ? word : '••••••';
+    if (!moneroPhraseVisible) value.setAttribute('aria-hidden', 'true');
+    card.append(number, value);
+    grid.append(card);
+  }
+  $('toggle-monero-phrase').textContent = moneroPhraseVisible ? 'Hide' : 'Reveal';
+  $('toggle-monero-phrase').setAttribute('aria-pressed', String(moneroPhraseVisible));
+}
+
 function selectChain(chain, focus = false) {
   activeChain = chain;
   for (const tab of $('chain-tabs').children) {
@@ -148,6 +188,12 @@ function selectChain(chain, focus = false) {
   }
   $('address-panel').setAttribute('aria-labelledby', `tab-${chain}`);
   $('chain-description').textContent = chainDetails[chain];
+  $('monero-recovery-panel').hidden = chain !== 'xmr' || !currentResult?.recovery?.xmr;
+  if (chain !== 'xmr') {
+    $('monero-recovery-details').open = false;
+    moneroPhraseVisible = false;
+    renderMoneroMnemonic();
+  }
   const list = $('address-list');
   list.replaceChildren();
   if (!currentResult) return;
@@ -160,10 +206,15 @@ function selectChain(chain, focus = false) {
     const address = document.createElement('span');
     address.className = 'address-text';
     address.textContent = entry.address;
+    const pathDetails = document.createElement('details');
+    pathDetails.className = 'address-path-details';
+    const pathLabel = document.createElement('summary');
+    pathLabel.textContent = chain === 'xmr' ? (position === 0 ? 'Primary · 0 / 0' : `Subaddress · 0 / ${entry.subaddress}`) : 'Derivation path';
     const path = document.createElement('span');
     path.className = 'address-path';
     path.textContent = entry.path;
-    data.append(address, path);
+    pathDetails.append(pathLabel, path);
+    data.append(address, pathDetails);
     const action = document.createElement('td');
     const button = document.createElement('button');
     button.type = 'button';
@@ -189,6 +240,7 @@ function renderResult(result) {
   const seconds = ((performance.now() - startedAt) / 1000).toFixed(1);
   $('result-timing').textContent = `Derived locally in ${seconds}s`;
   renderMnemonic();
+  renderMoneroMnemonic();
   selectChain(activeChain);
   setBusy(false);
   announce('Recovery phrase ready. Twelve words and twenty receiving addresses per chain have been generated. The recovery phrase is hidden.');
@@ -256,20 +308,20 @@ function formatBits(value) {
 function renderStrength(result) {
   const combined = Number(result.combinedBits);
   const passphraseBits = Number(result.passphraseBits);
-  const emailBits = privateEmailInput.checked && emailInput.value.length > 0 ? Math.max(0, Number(result.emailBits) || 0) : 0;
+  const emailBits = privateEmailEnabled() && emailInput.value.length > 0 ? Math.max(0, Number(result.emailBits) || 0) : 0;
   const displayBits = Number.isFinite(combined) ? Math.min(128, combined) : Math.min(128, passphraseBits + emailBits);
-  $('strength-label').textContent = result.label || 'Estimate ready';
+  $('strength-label').textContent = result.limited ? 'Limited estimate' : (result.label || 'Estimate ready').replace(' guesswork estimate', '');
   $('strength-meter').dataset.score = String(Math.max(0, Math.min(4, Number(result.score) || 0)));
   $('strength-bits').textContent = formatBits(displayBits);
   const feedback = Array.isArray(result.feedback) ? result.feedback.join(' ') : result.feedback;
   $('strength-feedback').textContent = feedback || 'This is estimated guesswork under a model, not true entropy or a security guarantee.';
-  const parts = [`Passphrase: ${formatBits(passphraseBits)} estimated bits`];
-  if (emailBits > 0) parts.push(`email: +${formatBits(emailBits)} under your assumption`);
-  if (combined >= 128) parts.push('display capped at 128; not a guarantee');
-  if (result.limited) parts.push('estimator limits apply');
+  const parts = [`Passphrase ${formatBits(passphraseBits)}`];
+  if (emailBits > 0) parts.push(`email +${formatBits(emailBits)} assumed`);
+  if (combined >= 128) parts.push('capped at 128');
+  if (result.limited) parts.push('limited estimate');
   $('strength-detail').textContent = parts.join(' · ');
   $('strength-detail').hidden = false;
-  $('email-estimate').textContent = privateEmailInput.checked && emailInput.value.length > 0
+  $('email-estimate').textContent = privateEmailEnabled() && emailInput.value.length > 0
     ? (result.emailAssumption || `Email estimate: +${formatBits(emailBits)} bits, assuming privacy and independence. This assumption may be wrong.`)
     : 'Email contributes 0 estimated bits by default.';
 }
@@ -284,7 +336,7 @@ function scheduleStrength() {
     return;
   }
   $('strength-label').textContent = 'Estimating locally…';
-  $('email-estimate').textContent = privateEmailInput.checked && emailInput.value.length > 0 ? 'Estimating under your privacy and independence assumption…' : 'Email contributes 0 estimated bits by default.';
+  $('email-estimate').textContent = privateEmailEnabled() && emailInput.value.length > 0 ? 'Estimating under your privacy and independence assumption…' : 'Email contributes 0 estimated bits by default.';
   const id = ++jobCounter;
   strengthTimer = setTimeout(() => {
     strengthTimer = null;
@@ -310,7 +362,7 @@ function scheduleStrength() {
         resetStrength();
         $('strength-label').textContent = 'Estimate unavailable';
       };
-      strengthTask.worker.postMessage({ id, passphrase: passphraseInput.value, email: emailInput.value, privateEmail: privateEmailInput.checked });
+      strengthTask.worker.postMessage({ id, passphrase: passphraseInput.value, email: emailInput.value, privateEmail: privateEmailEnabled() });
     } catch {
       resetStrength();
       $('strength-label').textContent = 'Estimate unavailable';
@@ -389,6 +441,7 @@ function resetAll({ focus = true, announceReset = true } = {}) {
   $('copy-status').hidden = true;
   $('copy-status').textContent = '';
   form.reset();
+  setPrivateEmail(false);
   passphraseInput.value = '';
   emailInput.value = '';
   passphraseInput.type = 'password';
@@ -407,7 +460,10 @@ function resetAll({ focus = true, announceReset = true } = {}) {
 form.addEventListener('submit', startDerivation);
 passphraseInput.addEventListener('input', handleInputEdit);
 emailInput.addEventListener('input', handleInputEdit);
-privateEmailInput.addEventListener('change', scheduleStrength);
+privateEmailInput.addEventListener('click', () => {
+  setPrivateEmail(!privateEmailEnabled());
+  scheduleStrength();
+});
 $('toggle-password').addEventListener('click', () => {
   const visible = passphraseInput.type === 'password';
   passphraseInput.type = visible ? 'text' : 'password';
@@ -436,6 +492,20 @@ $('toggle-phrase').addEventListener('click', () => {
 $('copy-phrase').addEventListener('click', () => {
   if (currentResult) copyText(currentResult.mnemonic, 'Recovery phrase');
 });
+$('toggle-monero-phrase').addEventListener('click', () => {
+  if (!currentResult?.recovery?.xmr) return;
+  moneroPhraseVisible = !moneroPhraseVisible;
+  renderMoneroMnemonic();
+});
+$('copy-monero-phrase').addEventListener('click', () => {
+  if (currentResult?.recovery?.xmr) copyText(currentResult.recovery.xmr.mnemonic, 'Monero recovery phrase');
+});
+$('monero-recovery-details').addEventListener('toggle', () => {
+  if (!$('monero-recovery-details').open) {
+    moneroPhraseVisible = false;
+    renderMoneroMnemonic();
+  }
+});
 $('chain-tabs').addEventListener('click', (event) => {
   const tab = event.target.closest('[data-chain]');
   if (tab) selectChain(tab.dataset.chain);
@@ -460,3 +530,9 @@ $('address-list').addEventListener('click', (event) => {
   if (entry) copyText(entry.address, `${activeChain.toUpperCase()} address`);
 });
 window.addEventListener('pagehide', () => resetAll({ focus: false, announceReset: false }));
+document.querySelectorAll('a[href^="#docs-"]').forEach((link) => {
+  link.addEventListener('click', () => {
+    const section = $(link.getAttribute('href').slice(1));
+    if (section instanceof HTMLDetailsElement) section.open = true;
+  });
+});

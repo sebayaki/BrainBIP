@@ -13,6 +13,7 @@ import { PROFILE, normalizeInputs, deriveAddresses, deriveWallet, safeErrorMessa
 const standardMnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 const fixturesDirectory = new URL('./fixtures/', import.meta.url);
 const fixture = async (name) => JSON.parse(await readFile(new URL(name, fixturesDirectory), 'utf8'));
+const originalChains = (addresses) => Object.fromEntries(['btc', 'eth', 'sol', 'zec'].map((chain) => [chain, addresses[chain]]));
 const hash = (algorithm, data) => createHash(algorithm).update(data).digest();
 const sha256 = (data) => hash('sha256', data);
 const hash160 = (data) => hash('ripemd160', sha256(data));
@@ -241,7 +242,7 @@ if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
 
   test('all 80 mainnet addresses match independent OpenSSL HD and encoding references', async () => {
     const expected = await fixture('standard-addresses.json');
-    assert.deepEqual(deriveAddresses(expected.mnemonic), expected.addresses);
+    assert.deepEqual(originalChains(deriveAddresses(expected.mnemonic)), expected.addresses);
     assert.deepEqual(await referenceAddresses(expected.mnemonic), expected.addresses);
     // Official BIP84 test vectors directly verify the reference Bech32 encoder.
     assert.equal(expected.addresses.btc[0].address, 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
@@ -270,9 +271,9 @@ if (process.env.BRAINBIP_GENERATE_FIXTURES === '1') {
     const stages = [];
     const started = performance.now();
     const actual = await deriveWallet(expected.passphrase, expected.email, (stage) => stages.push(stage));
-    context.diagnostic(`Full 256 MiB Argon2id + 1,048,576 PBKDF2 + 80 addresses: ${(performance.now() - started).toFixed(0)} ms`);
+    context.diagnostic(`Full 256 MiB Argon2id + 1,048,576 PBKDF2 + 100 addresses: ${(performance.now() - started).toFixed(0)} ms`);
     assert.deepEqual(stages, ['argon2id', 'pbkdf2', 'addresses']);
-    assert.deepEqual(actual, { profile: expected.profile, mnemonic: expected.mnemonic, addresses: expected.addresses });
+    assert.deepEqual({ profile: actual.profile, mnemonic: actual.mnemonic, addresses: originalChains(actual.addresses) }, { profile: expected.profile, mnemonic: expected.mnemonic, addresses: expected.addresses });
     assert.equal(Buffer.from(mnemonicToSeedSync(actual.mnemonic, '')).toString('hex'), expected.bip39SeedHex);
     // Verify fixture PBKDF2 and mixing independently without another expensive Argon2 invocation.
     const password = Buffer.from(expected.normalizedPassphrase);
