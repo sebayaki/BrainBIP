@@ -1,0 +1,195 @@
+import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
+const fixture = JSON.parse(await readFile(new URL('../fixtures/brainbip-v1.json', import.meta.url), 'utf8'));
+const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
+const htmlPath = fileURLToPath(new URL('../../dist/brainbip.html', import.meta.url));
+
+async function enterFixture(page) {
+  await page.locator('#passphrase').fill(fixture.passphrase);
+  await page.locator('#email').fill(fixture.email);
+}
+
+async function generate(page) {
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#result-state')).toBeVisible({ timeout: 45_000 });
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(12);
+}
+
+async function assertAllAddresses(page) {
+  for (const chain of ['btc', 'eth', 'sol', 'zec']) {
+    await page.locator(`#tab-${chain}`).click();
+    await expect(page.locator('#address-list tr')).toHaveCount(20);
+    await expect(page.locator('.address-text')).toHaveText(fixture.addresses[chain].map((entry) => entry.address));
+    await expect(page.locator('.address-path')).toHaveText(fixture.addresses[chain].map((entry) => entry.path));
+  }
+}
+
+test('hosted edition computes the full profile offline, shows all addresses, and clears secrets', async ({ page, context }, testInfo) => {
+  const errors = [];
+  const requests = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('request', (request) => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
+  await page.addInitScript(() => {
+    window.testCopies = [];
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (value) => window.testCopies.push(value) }, configurable: true });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.locator('#generate-button')).toBeDisabled();
+  await page.screenshot({ path: testInfo.outputPath('desktop-empty.png'), fullPage: true });
+  await context.setOffline(true);
+  await enterFixture(page);
+  await expect(page.locator('#strength-bits')).not.toHaveText('—', { timeout: 15_000 });
+  await generate(page);
+  await expect(page.locator('.word-value').first()).toHaveText('••••••');
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('.word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await assertAllAddresses(page);
+  await page.locator('#tab-btc').click();
+  await page.locator('#tab-btc').press('ArrowRight');
+  await expect(page.locator('#tab-eth')).toHaveAttribute('aria-selected', 'true');
+  await page.locator('#copy-phrase').click();
+  await page.locator('.copy-address').first().click();
+  await expect.poll(() => page.evaluate(() => window.testCopies)).toEqual([fixture.mnemonic, fixture.addresses.eth[0].address]);
+  await page.screenshot({ path: testInfo.outputPath('desktop-result.png'), fullPage: true });
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('.word-value').first()).toHaveText('••••••');
+  await expect(page.locator('#mnemonic-grid')).not.toContainText(fixture.mnemonic.split(' ')[0]);
+  await page.locator('#email').fill('changed@example.invalid');
+  await expect(page.locator('#result-state')).toBeHidden();
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#passphrase')).toHaveValue('');
+  await expect(page.locator('#email')).toHaveValue('');
+  await expect(page.locator('#generate-button')).toBeDisabled();
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length, document.cookie])).toEqual([0, 0, '']);
+  expect(await page.evaluate(async () => (await indexedDB.databases()).length)).toBe(0);
+  expect(requests).toEqual(['http://127.0.0.1:4173/']);
+  expect(errors).toEqual([]);
+});
+
+test('single file runs without a server or network at a mobile viewport', async ({ page, context }, testInfo) => {
+  const networkRequests = [];
+  const errors = [];
+  page.on('request', (request) => { if (/^https?:/.test(request.url())) networkRequests.push(request.url()); });
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  await context.setOffline(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(offlineURL);
+  await expect(page.locator('#offline-link')).toBeHidden();
+  await page.screenshot({ path: testInfo.outputPath('mobile-empty.png'), fullPage: true });
+  await enterFixture(page);
+  await generate(page);
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('.word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await assertAllAddresses(page);
+  await page.screenshot({ path: testInfo.outputPath('mobile-result.png'), fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 320, height: 740 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('mobile-narrow.png'), fullPage: true });
+  expect(networkRequests).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('cancel, input edits, and reset discard pending computations', async ({ page }) => {
+  await page.goto('/');
+  await enterFixture(page);
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#progress-state')).toBeVisible();
+  await page.locator('#cancel-button').click();
+  await expect(page.locator('#empty-state')).toBeVisible();
+  await expect(page.locator('#generate-button')).toBeEnabled();
+  await page.locator('#generate-button').click();
+  await page.locator('#passphrase').fill('changed input, public test only');
+  await expect(page.locator('#progress-state')).toBeHidden();
+  await expect(page.locator('#result-state')).toBeHidden();
+  await page.locator('#generate-button').click();
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#generate-button')).toBeDisabled();
+  await expect(page.locator('#progress-state')).toBeHidden();
+  await enterFixture(page);
+  await generate(page);
+  await page.locator('#toggle-phrase').click();
+  await expect(page.locator('.word-value')).toHaveText(fixture.mnemonic.split(' '));
+});
+
+test('offline download contains pristine build bytes, never the current form', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#passphrase').fill('PRIVATE_RUNTIME_SENTINEL__do_not_embed_9163');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#offline-link').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('brainbip.html');
+  const downloaded = await readFile(await download.path(), 'utf8');
+  expect(downloaded).toBe(await readFile(htmlPath, 'utf8'));
+  expect(downloaded).not.toContain('PRIVATE_RUNTIME_SENTINEL__do_not_embed_9163');
+});
+
+test('unsupported workers fail visibly instead of weakening the derivation', async ({ page }) => {
+  await page.addInitScript(() => { window.Worker = class { constructor() { throw new Error('Unsupported'); } }; });
+  await page.goto('/');
+  await enterFixture(page);
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#input-error')).toBeVisible();
+  await expect(page.locator('#result-state')).toBeHidden();
+  await expect(page.locator('#generate-button')).toBeEnabled();
+  await expect(page.locator('#input-error')).toContainText('could not start local computation');
+});
+
+test('a deferred clipboard rejection cannot reintroduce a cleared phrase', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.fallbackCopies = 0;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText: () => new Promise((resolve, reject) => { window.rejectTestCopy = reject; }),
+    } });
+    document.execCommand = () => { window.fallbackCopies += 1; return true; };
+  });
+  await page.goto('/');
+  await enterFixture(page);
+  await generate(page);
+  await page.locator('#copy-phrase').click();
+  await expect.poll(() => page.evaluate(() => typeof window.rejectTestCopy)).toBe('function');
+  await page.locator('#reset-button').click();
+  await page.evaluate(async () => {
+    window.rejectTestCopy(new Error('Clipboard permission denied'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  expect(await page.evaluate(() => window.fallbackCopies)).toBe(0);
+  await expect(page.locator('textarea')).toHaveCount(0);
+  await expect(page.locator('#copy-status')).toBeHidden();
+  await expect(page.locator('#mnemonic-grid li')).toHaveCount(0);
+});
+
+test('leaving the page clears state before a back-forward cache restore', async ({ page }) => {
+  await page.goto('/');
+  await enterFixture(page);
+  await page.locator('#generate-button').click();
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+  await expect(page.locator('#passphrase')).toHaveValue('');
+  await expect(page.locator('#email')).toHaveValue('');
+  await expect(page.locator('#progress-state')).toBeHidden();
+  await expect(page.locator('#result-state')).toBeHidden();
+  await expect(page.locator('#generate-button')).toBeDisabled();
+  await page.locator('#passphrase').fill('public test input');
+  await expect(page.locator('#generate-button')).toBeEnabled();
+});
+
+test('long input is rejected explicitly instead of silently truncated into another wallet', async ({ page }) => {
+  await page.goto('/');
+  const tooLong = 'x'.repeat(1025);
+  await page.locator('#passphrase').fill(tooLong);
+  await expect(page.locator('#passphrase')).toHaveValue(tooLong);
+  await page.locator('#generate-button').click();
+  await expect(page.locator('#input-error')).toContainText('at most 1024 characters');
+  await expect(page.locator('#result-state')).toBeHidden();
+  await expect(page.locator('#generate-button')).toBeEnabled();
+  const unicode = '😀'.repeat(600);
+  await page.locator('#passphrase').fill(unicode);
+  await expect(page.locator('#passphrase')).toHaveValue(unicode);
+});

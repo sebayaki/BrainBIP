@@ -1,0 +1,414 @@
+{
+  "provenance": "Node/OpenSSL HMAC, PBKDF2, secp256k1 and Ed25519; independent BIP32, SLIP10, Base58 and Bech32 encoders; hash-wasm Keccak.",
+  "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+  "addresses": {
+    "btc": [
+      {
+        "index": 0,
+        "path": "m/84'/0'/0'/0/0",
+        "address": "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"
+      },
+      {
+        "index": 1,
+        "path": "m/84'/0'/0'/0/1",
+        "address": "bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g"
+      },
+      {
+        "index": 2,
+        "path": "m/84'/0'/0'/0/2",
+        "address": "bc1qp59yckz4ae5c4efgw2s5wfyvrz0ala7rgvuz8z"
+      },
+      {
+        "index": 3,
+        "path": "m/84'/0'/0'/0/3",
+        "address": "bc1qgl5vlg0zdl7yvprgxj9fevsc6q6x5dmcyk3cn3"
+      },
+      {
+        "index": 4,
+        "path": "m/84'/0'/0'/0/4",
+        "address": "bc1qm97vqzgj934vnaq9s53ynkyf9dgr05rargr04n"
+      },
+      {
+        "index": 5,
+        "path": "m/84'/0'/0'/0/5",
+        "address": "bc1qnpzzqjzet8gd5gl8l6gzhuc4s9xv0djt0rlu7a"
+      },
+      {
+        "index": 6,
+        "path": "m/84'/0'/0'/0/6",
+        "address": "bc1qtet8q6cd5vqm0zjfcfm8mfsydju0a29ggqrmu9"
+      },
+      {
+        "index": 7,
+        "path": "m/84'/0'/0'/0/7",
+        "address": "bc1qhxgzmkmwvrlwvlfn4qe57lx2qdfg8phycnsarn"
+      },
+      {
+        "index": 8,
+        "path": "m/84'/0'/0'/0/8",
+        "address": "bc1qncdts3qm2guw3hjstun7dd6t3689qg4230jh2n"
+      },
+      {
+        "index": 9,
+        "path": "m/84'/0'/0'/0/9",
+        "address": "bc1qgswpjzsqgrm2qkfkf9kzqpw6642ptrgzapvh9y"
+      },
+      {
+        "index": 10,
+        "path": "m/84'/0'/0'/0/10",
+        "address": "bc1qd30z5a5e50jtgx28rvt64483tq65r9pkj623wh"
+      },
+      {
+        "index": 11,
+        "path": "m/84'/0'/0'/0/11",
+        "address": "bc1qxr4fjkvnxjqphuyaw5a08za9g6qqh65t8qwgum"
+      },
+      {
+        "index": 12,
+        "path": "m/84'/0'/0'/0/12",
+        "address": "bc1q8txvqq8kr0nhkatkrmeg7zaj45zpsef2ylc9pq"
+      },
+      {
+        "index": 13,
+        "path": "m/84'/0'/0'/0/13",
+        "address": "bc1qgr7f3jfuzhpe45h3dnqxxjr3ml0de4ad2w3ysd"
+      },
+      {
+        "index": 14,
+        "path": "m/84'/0'/0'/0/14",
+        "address": "bc1q4fxs7lhw70m7nn7u6hqsa0glyt045ls5vdl6hs"
+      },
+      {
+        "index": 15,
+        "path": "m/84'/0'/0'/0/15",
+        "address": "bc1qgtus5u58avcs5ehpqvcllv5f66dneznw3upy2v"
+      },
+      {
+        "index": 16,
+        "path": "m/84'/0'/0'/0/16",
+        "address": "bc1q7kv2wwzgh2zej88ywrjvnpvmqy2emefc8ar3za"
+      },
+      {
+        "index": 17,
+        "path": "m/84'/0'/0'/0/17",
+        "address": "bc1qrz46a4gt0sghvvyt4gy5kp2rswmhtufv6sdq9v"
+      },
+      {
+        "index": 18,
+        "path": "m/84'/0'/0'/0/18",
+        "address": "bc1qf60uv69k0prrdxkpmh94u9cwmkpkl0t0r02hgh"
+      },
+      {
+        "index": 19,
+        "path": "m/84'/0'/0'/0/19",
+        "address": "bc1q27yd7vz8m5kz230wuyncfe3pyazez6ah58yzy0"
+      }
+    ],
+    "eth": [
+      {
+        "index": 0,
+        "path": "m/44'/60'/0'/0/0",
+        "address": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94"
+      },
+      {
+        "index": 1,
+        "path": "m/44'/60'/0'/0/1",
+        "address": "0x6Fac4D18c912343BF86fa7049364Dd4E424Ab9C0"
+      },
+      {
+        "index": 2,
+        "path": "m/44'/60'/0'/0/2",
+        "address": "0xb6716976A3ebe8D39aCEB04372f22Ff8e6802D7A"
+      },
+      {
+        "index": 3,
+        "path": "m/44'/60'/0'/0/3",
+        "address": "0xF3f50213C1d2e255e4B2bAD430F8A38EEF8D718E"
+      },
+      {
+        "index": 4,
+        "path": "m/44'/60'/0'/0/4",
+        "address": "0x51cA8ff9f1C0a99f88E86B8112eA3237F55374cA"
+      },
+      {
+        "index": 5,
+        "path": "m/44'/60'/0'/0/5",
+        "address": "0xA40cFBFc8534FFC84E20a7d8bBC3729B26a35F6f"
+      },
+      {
+        "index": 6,
+        "path": "m/44'/60'/0'/0/6",
+        "address": "0xB191a13bfE648B61002F2e2135867015B71816a6"
+      },
+      {
+        "index": 7,
+        "path": "m/44'/60'/0'/0/7",
+        "address": "0x593814d3309e2dF31D112824F0bb5aa7Cb0D7d47"
+      },
+      {
+        "index": 8,
+        "path": "m/44'/60'/0'/0/8",
+        "address": "0xB14c391e2bf19E5a26941617ab546FA620A4f163"
+      },
+      {
+        "index": 9,
+        "path": "m/44'/60'/0'/0/9",
+        "address": "0x4C1C56443AbFe6dD33de31dAaF0a6E929DBc4971"
+      },
+      {
+        "index": 10,
+        "path": "m/44'/60'/0'/0/10",
+        "address": "0xEf4ba16373841C53a9Ba168873fC3967118C1d37"
+      },
+      {
+        "index": 11,
+        "path": "m/44'/60'/0'/0/11",
+        "address": "0xa251F9b1F365bF1be54b6bDa3bbEAD414f1Af763"
+      },
+      {
+        "index": 12,
+        "path": "m/44'/60'/0'/0/12",
+        "address": "0x7286A5102BB0FaC25F53A4819A5F933698155945"
+      },
+      {
+        "index": 13,
+        "path": "m/44'/60'/0'/0/13",
+        "address": "0x5Edc7559F077dD692901e7e4E92970ad81022Ee7"
+      },
+      {
+        "index": 14,
+        "path": "m/44'/60'/0'/0/14",
+        "address": "0x9Ef58eAb71ab36B337450598a9F56451e13DB8E3"
+      },
+      {
+        "index": 15,
+        "path": "m/44'/60'/0'/0/15",
+        "address": "0xa25d37554EB084969C85362f7E6B1A6108e51d0e"
+      },
+      {
+        "index": 16,
+        "path": "m/44'/60'/0'/0/16",
+        "address": "0xF4EeD1f0589E2Cd7cF29CCE5f6f45e1ed65594aB"
+      },
+      {
+        "index": 17,
+        "path": "m/44'/60'/0'/0/17",
+        "address": "0x516A2191b53f7654654F209CcA9668b16f149988"
+      },
+      {
+        "index": 18,
+        "path": "m/44'/60'/0'/0/18",
+        "address": "0x944A807C53BCe5a96dD4E558E993833aB41CE65F"
+      },
+      {
+        "index": 19,
+        "path": "m/44'/60'/0'/0/19",
+        "address": "0x5096eEe90Aa1b783AF381669938C688F02bb43D8"
+      }
+    ],
+    "sol": [
+      {
+        "index": 0,
+        "path": "m/44'/501'/0'/0'",
+        "address": "HAgk14JpMQLgt6rVgv7cBQFJWFto5Dqxi472uT3DKpqk"
+      },
+      {
+        "index": 1,
+        "path": "m/44'/501'/1'/0'",
+        "address": "Hh8QwFUA6MtVu1qAoq12ucvFHNwCcVTV7hpWjeY1Hztb"
+      },
+      {
+        "index": 2,
+        "path": "m/44'/501'/2'/0'",
+        "address": "7WktogJEd2wQ9eH2oWusmcoFTgeYi6rS632UviTBJ2jm"
+      },
+      {
+        "index": 3,
+        "path": "m/44'/501'/3'/0'",
+        "address": "3YqEpfo3c818GhvbQ1UmVY1nJxw16vtu4JB9peJXT94k"
+      },
+      {
+        "index": 4,
+        "path": "m/44'/501'/4'/0'",
+        "address": "6nod592sTfEWD3VSVPdQndLMVBCNmMc6ngt7MyGBK21j"
+      },
+      {
+        "index": 5,
+        "path": "m/44'/501'/5'/0'",
+        "address": "2EUrWmf5xMmWER9BtDbXbGbZjoL7R3eTDMXYR6H6cKPj"
+      },
+      {
+        "index": 6,
+        "path": "m/44'/501'/6'/0'",
+        "address": "5P2eQoLncuFMjAmNNF4PspnAXYNaDSE2t1gb5os76Svw"
+      },
+      {
+        "index": 7,
+        "path": "m/44'/501'/7'/0'",
+        "address": "9h1cLBiraaUqM1CdJTaVaew1oQtgQUW24FZ8YdnLLgJY"
+      },
+      {
+        "index": 8,
+        "path": "m/44'/501'/8'/0'",
+        "address": "GS6Y8rQB8W3SWfLpQuooT1pEm7mqRKnTP1EkNKL2Xeha"
+      },
+      {
+        "index": 9,
+        "path": "m/44'/501'/9'/0'",
+        "address": "HDyTY5B1TJ3WgyfaziZtDGaBqj3ofKm8499Q8meqk4nx"
+      },
+      {
+        "index": 10,
+        "path": "m/44'/501'/10'/0'",
+        "address": "AcLS2t8rzEqeQnbJK4HBS7g8NBCa7SowjARdvxtqBE3t"
+      },
+      {
+        "index": 11,
+        "path": "m/44'/501'/11'/0'",
+        "address": "FLzoxtpBbnn5nGcyokN47Di2M3VJ7FaiUNGpeZWVRUgz"
+      },
+      {
+        "index": 12,
+        "path": "m/44'/501'/12'/0'",
+        "address": "3ih2doS8hZJsnMnZ4Xho4rckrZKq8Co5N5GdCEnD6Mx3"
+      },
+      {
+        "index": 13,
+        "path": "m/44'/501'/13'/0'",
+        "address": "HQmgK6Syw5XG8zkEnSoBaNz3fhrGHLt1LUfeGWaVuhLh"
+      },
+      {
+        "index": 14,
+        "path": "m/44'/501'/14'/0'",
+        "address": "8qRMXdEGhfrVMSEgYiBvDrPVQTR83PXWPzUFsLzwp1hS"
+      },
+      {
+        "index": 15,
+        "path": "m/44'/501'/15'/0'",
+        "address": "DsjwrNNNQL9LpRrGmgvzvuFHrApXDCQ2mVTZg4NT4mGr"
+      },
+      {
+        "index": 16,
+        "path": "m/44'/501'/16'/0'",
+        "address": "GG9npDte2RMSejBwzBuLsdENouHZVdcMgTK3FEnsdHxF"
+      },
+      {
+        "index": 17,
+        "path": "m/44'/501'/17'/0'",
+        "address": "9Pd8ratWtmsyVXtcThE6rzURzSk77iAheqBn87Q66RtB"
+      },
+      {
+        "index": 18,
+        "path": "m/44'/501'/18'/0'",
+        "address": "Cz4FDEewmYtKpoBQYmMVaXXL6GJPU3ZjHx7RH2enm5Pp"
+      },
+      {
+        "index": 19,
+        "path": "m/44'/501'/19'/0'",
+        "address": "CWJKBYW8VndqhBJyMLX1kaHbx5R47CTKCbHHx78dhFQV"
+      }
+    ],
+    "zec": [
+      {
+        "index": 0,
+        "path": "m/44'/133'/0'/0/0",
+        "address": "t1XVXWCvpMgBvUaed4XDqWtgQgJSu1Ghz7F"
+      },
+      {
+        "index": 1,
+        "path": "m/44'/133'/0'/0/1",
+        "address": "t1aQ2b1XszNVo15BguYLbQGqETBL9QZA8Jq"
+      },
+      {
+        "index": 2,
+        "path": "m/44'/133'/0'/0/2",
+        "address": "t1gLHX58QpcZr2SfaMhc5XbxabE455KZhoA"
+      },
+      {
+        "index": 3,
+        "path": "m/44'/133'/0'/0/3",
+        "address": "t1M4FWL2VYmWy5qEuPUHrhEEcxsdkZ79xYn"
+      },
+      {
+        "index": 4,
+        "path": "m/44'/133'/0'/0/4",
+        "address": "t1QAU8388aa3G9DXnbGSverQoEoz3WeGEiy"
+      },
+      {
+        "index": 5,
+        "path": "m/44'/133'/0'/0/5",
+        "address": "t1Tgiw2AtjGLEtDRXEBGdqTeqyPNAuJTi8e"
+      },
+      {
+        "index": 6,
+        "path": "m/44'/133'/0'/0/6",
+        "address": "t1PPy4GfwecN9R5QTh6L2HwNUjJHKeeZS8M"
+      },
+      {
+        "index": 7,
+        "path": "m/44'/133'/0'/0/7",
+        "address": "t1MxeBazeNdLCyy6FCP5WJGmgnuasX8DMMT"
+      },
+      {
+        "index": 8,
+        "path": "m/44'/133'/0'/0/8",
+        "address": "t1YnSEj4zYkFucp6N5hCwJB45syDsWZdbz5"
+      },
+      {
+        "index": 9,
+        "path": "m/44'/133'/0'/0/9",
+        "address": "t1Wkdtbtajgcr5FUgMUKgEbf35vDbWfFzwu"
+      },
+      {
+        "index": 10,
+        "path": "m/44'/133'/0'/0/10",
+        "address": "t1eL4pYekd7wCc7YwT46Vv5jqTeiVQDmbcD"
+      },
+      {
+        "index": 11,
+        "path": "m/44'/133'/0'/0/11",
+        "address": "t1fkHLaP5PrcAHDH9ku6bFoVwUZCPurTNPh"
+      },
+      {
+        "index": 12,
+        "path": "m/44'/133'/0'/0/12",
+        "address": "t1T6t4H4zerrZRtkPVuu7fgVBCjRjNMY295"
+      },
+      {
+        "index": 13,
+        "path": "m/44'/133'/0'/0/13",
+        "address": "t1adibZgkPrarsS6Uqe72KNbUaXHkJmjVuc"
+      },
+      {
+        "index": 14,
+        "path": "m/44'/133'/0'/0/14",
+        "address": "t1Msw6c7mLQbPnHRyTC6NB3y2U2HjcrHiRM"
+      },
+      {
+        "index": 15,
+        "path": "m/44'/133'/0'/0/15",
+        "address": "t1MLSAGFxjhcEvx8Ff2u3bEaKxaHKJTVpkM"
+      },
+      {
+        "index": 16,
+        "path": "m/44'/133'/0'/0/16",
+        "address": "t1XZU2aGw86B8t4QN1ZafDt9425iVWFTt9m"
+      },
+      {
+        "index": 17,
+        "path": "m/44'/133'/0'/0/17",
+        "address": "t1M6y5Bv34DWamagNazyb3jrPd6dmvZYP9R"
+      },
+      {
+        "index": 18,
+        "path": "m/44'/133'/0'/0/18",
+        "address": "t1SyjUzDTer8UvnzBAiECY3vAms7uxkqRbe"
+      },
+      {
+        "index": 19,
+        "path": "m/44'/133'/0'/0/19",
+        "address": "t1SEvF5BCeJzU6Q4J3xHaRvuoTVuX4CQdxU"
+      }
+    ]
+  }
+}

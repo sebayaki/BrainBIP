@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f3e9">
+    <meta name="description" content="BrainBIP is an offline-first experiment that derives a twelve-word recovery phrase and receiving addresses from your passphrase.">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%23f5f3e9%22/%3E%3Cg fill=%22%2322241e%22%3E%3Crect x=%224%22 y=%224%22 width=%2210%22 height=%2210%22 rx=%222%22/%3E%3Crect x=%2218%22 y=%224%22 width=%2210%22 height=%2210%22 rx=%222%22/%3E%3Crect x=%224%22 y=%2218%22 width=%2210%22 height=%2210%22 rx=%222%22/%3E%3C/g%3E%3Crect x=%2218%22 y=%2218%22 width=%2210%22 height=%2210%22 rx=%222%22 fill=%22%23bdff61%22 stroke=%22%2322241e%22/%3E%3C/svg%3E">
+    <title>BrainBIP — A way back.</title>
+    <!-- CSP -->
+    <!-- APP_STYLES -->
+  </head>
+  <body>
+    <a class="skip-link" href="#wallet-form">Skip to wallet generator</a>
+    <div class="site-shell">
+      <header class="site-header">
+        <a class="brand" href="#" aria-label="BrainBIP home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span>Brain<span class="brand-light">BIP</span></span>
+        </a>
+        <nav class="header-links" aria-label="Main navigation">
+          <a id="offline-link" href="./brainbip.html" download="brainbip.html"><span aria-hidden="true">↙</span> Offline edition</a>
+          <a href="https://github.com/sebayaki/BrainBIP" target="_blank" rel="noopener noreferrer">Source <span aria-hidden="true">↗</span></a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> ON YOUR DEVICE. BY DESIGN.</p>
+            <h1 id="page-title">Your words.<br><span>A way back.</span></h1>
+            <p class="hero-description">A passphrase becomes twelve recovery words.<br class="desktop-break"> One phrase, receiving addresses across four chains.</p>
+          </div>
+          <div class="hero-diagram" aria-hidden="true">
+            <div class="diagram-top"><span>INPUT</span><span>01 / 04</span></div>
+            <div class="diagram-input"><span>••••••••••••</span><span class="diagram-plus">+</span><span class="diagram-salt">salt</span></div>
+            <div class="diagram-line"><span></span><i>↓</i><span></span></div>
+            <div class="diagram-seed"><div class="diagram-grid"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>12 WORDS</span></div>
+            <div class="diagram-bottom"><span>BTC</span><span>ETH</span><span>SOL</span><span>ZEC</span></div>
+          </div>
+        </section>
+
+        <div class="experiment-note"><span class="note-icon" aria-hidden="true">!</span><p><strong>An experiment, not an audited wallet.</strong> Slow derivation makes guessing more expensive. It cannot make a predictable passphrase safe.</p></div>
+
+        <div class="workspace">
+          <section class="input-panel panel" aria-labelledby="input-heading">
+            <div class="panel-heading"><span class="section-number">01</span><h2 id="input-heading">Start with what you remember.</h2></div>
+            <form id="wallet-form" autocomplete="off">
+              <div class="form-field">
+                <label for="passphrase">Passphrase</label>
+                <div class="password-wrap"><input id="passphrase" name="passphrase" type="password" placeholder="Make it long. Make it yours." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="passphrase-help"><button id="toggle-password" class="input-reveal" type="button" aria-label="Show passphrase" aria-pressed="false">Show</button></div>
+                <p id="passphrase-help" class="field-help">Passphrase spaces and letter case matter.</p>
+              </div>
+
+              <div class="strength-box" aria-label="Local passphrase estimate">
+                <div class="strength-heading"><span class="small-label">ESTIMATED GUESSWORK</span><span id="strength-label" class="strength-label">Awaiting input</span></div>
+                <div id="strength-meter" class="strength-meter" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                <div class="estimate-line"><span id="strength-bits">—</span><span class="estimate-unit">bits, under this model</span></div>
+                <p id="strength-feedback" class="field-help">Common words and patterns are easier to guess. This local estimate is not measured entropy or a security guarantee.</p>
+                <p id="strength-detail" class="strength-detail" hidden></p>
+              </div>
+
+              <div class="form-field email-field">
+                <label for="email">Email salt <span class="optional">optional</span></label>
+                <input id="email" name="email" type="text" placeholder="An email you can reproduce" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-describedby="email-help">
+                <p id="email-help" class="field-help">Email spaces at the ends are ignored. A salt makes the result specific to these inputs; it is not a second authentication factor.</p>
+                <label class="checkbox-label" for="private-email"><input id="private-email" type="checkbox"><span>Estimate this email as private and independent.</span></label>
+                <p id="email-estimate" class="email-estimate">Email contributes 0 estimated bits by default.</p>
+              </div>
+
+              <div id="input-error" class="error-message" role="alert" hidden></div>
+              <div class="generate-row"><button id="generate-button" class="button button-primary" type="submit" disabled><span id="generate-label">Generate recovery phrase</span><span class="button-arrow" aria-hidden="true">↗</span></button><button id="cancel-button" class="button button-secondary" type="button" hidden>Cancel</button></div>
+              <div class="input-footer"><span><span class="tiny-dot" aria-hidden="true"></span> Computed locally</span><button id="reset-button" class="text-button" type="button">Clear &amp; reset <span aria-hidden="true">↺</span></button></div>
+            </form>
+          </section>
+
+          <section id="output-panel" class="output-panel panel" aria-labelledby="output-heading" aria-busy="false">
+            <div class="panel-heading output-heading"><span class="section-number">02</span><h2 id="output-heading">Your recovery workspace.</h2><span id="profile-tag" class="profile-tag" hidden>V1</span></div>
+
+            <div id="empty-state" class="empty-state">
+              <div class="empty-art" aria-hidden="true"><div class="empty-art-lines"><i></i><i></i><i></i></div><div class="empty-art-card"><span>RECOVERY PHRASE</span><div><i>01</i><i>02</i><i>03</i><i>04</i><i>05</i><i>06</i><i>07</i><i>08</i><i>09</i><i>10</i><i>11</i><i>12</i></div></div><span class="empty-art-dot"></span></div>
+              <h3>Twelve words. One starting point.</h3>
+              <p>Enter your passphrase to derive your recovery phrase<br class="desktop-break"> and the first 20 receiving addresses on each chain.</p>
+              <div class="chain-pills" aria-label="Supported chains"><span>Bitcoin</span><span>Ethereum</span><span>Solana</span><span>Zcash <small>transparent</small></span></div>
+            </div>
+
+            <div id="progress-state" class="progress-state" hidden>
+              <div class="progress-symbol" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+              <h3>Building your way back.</h3>
+              <p>Memory-intensive computation is running on your device.<br>The time needed depends on your hardware.</p>
+              <ol id="stage-list" class="stage-list"><li data-stage="argon2id"><span class="stage-marker">1</span><div><strong>Memory-hard derivation</strong><small>Argon2id · 256 MiB · 3 passes</small></div><span class="stage-status">Waiting</span></li><li data-stage="pbkdf2"><span class="stage-marker">2</span><div><strong>Second derivation</strong><small>PBKDF2-SHA256 · 1,048,576 iterations</small></div><span class="stage-status">Waiting</span></li><li data-stage="addresses"><span class="stage-marker">3</span><div><strong>Recovery words &amp; addresses</strong><small>12 words · 4 chains · 20 addresses each</small></div><span class="stage-status">Waiting</span></li></ol>
+              <p class="progress-hint">Editing either input cancels this computation.</p>
+            </div>
+
+            <div id="result-state" class="result-state" hidden>
+              <div class="result-subheading"><div><h3>Recovery phrase</h3><p id="phrase-visibility-note">Hidden from view. Reveal when you are ready.</p></div><div class="phrase-actions"><button id="toggle-phrase" class="button button-small" type="button" aria-pressed="false">Reveal</button><button id="copy-phrase" class="button button-small" type="button">Copy <span aria-hidden="true">↗</span></button></div></div>
+              <ol id="mnemonic-grid" class="mnemonic-grid" aria-label="Recovery phrase hidden"></ol>
+              <p class="phrase-note">These words can restore every address below. Keep them private.</p>
+
+              <div class="address-section"><div class="address-heading"><h3>Receiving addresses</h3><span>FIRST 20 / CHAIN</span></div><div id="chain-tabs" class="chain-tabs" role="tablist" aria-label="Address chain"><button id="tab-btc" type="button" role="tab" data-chain="btc" aria-selected="true" aria-controls="address-panel" tabindex="0">BTC</button><button id="tab-eth" type="button" role="tab" data-chain="eth" aria-selected="false" aria-controls="address-panel" tabindex="-1">ETH</button><button id="tab-sol" type="button" role="tab" data-chain="sol" aria-selected="false" aria-controls="address-panel" tabindex="-1">SOL</button><button id="tab-zec" type="button" role="tab" data-chain="zec" aria-selected="false" aria-controls="address-panel" tabindex="-1">ZEC</button></div><div id="address-panel" role="tabpanel" aria-labelledby="tab-btc" tabindex="0"><p id="chain-description" class="chain-description"></p><div class="address-table-wrap"><table class="address-table"><thead><tr><th scope="col">#</th><th scope="col">ADDRESS / DERIVATION PATH</th><th scope="col"><span class="sr-only">Copy address</span></th></tr></thead><tbody id="address-list"></tbody></table></div></div></div>
+              <div class="result-footer"><span><span class="tiny-dot" aria-hidden="true"></span> <span id="result-timing">Derived locally</span></span><span id="result-profile">brainbip-v1</span></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="about-section" aria-label="How BrainBIP works">
+          <details id="about-details"><summary><span>Built to be reproducible.</span><span class="details-toggle" aria-hidden="true">+</span></summary><div class="about-content"><div><h3>The same inputs. The same result.</h3><p>BrainBIP derives an English BIP39 phrase using the fixed <code>brainbip-v1</code> profile. The profile uses Argon2id with 256 MiB of memory, 3 passes and 1 lane, plus PBKDF2-SHA256 with 1,048,576 iterations. The additional BIP39 passphrase is empty.</p><p>Inputs use Unicode NFKC normalization. Passphrase spaces and case are preserved; email whitespace at the ends is removed, and its case is preserved. The profile and each address’s derivation path matter for recovery.</p></div><div><h3>Offline is a complete edition.</h3><p>The downloadable HTML contains the app and its cryptographic code. It can run without a server or a network connection. No input is saved to browser storage.</p><p>Strength feedback estimates guessability. It does not establish the entropy of something you chose, and a twelve-word output does not prove 128 bits of input strength. Zcash addresses here are transparent and provide no shielded privacy.</p></div></div></details>
+        </section>
+        <!-- THIRD_PARTY -->
+      </main>
+
+      <footer class="site-footer"><span>BrainBIP <span class="footer-separator">/</span> A passphrase. Twelve words. Four chains.</span><span>Open source <span class="footer-separator">/</span> MIT</span></footer>
+    </div>
+    <div id="live-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="copy-status" class="copy-toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+    <noscript><p class="noscript-note">BrainBIP needs JavaScript to compute your recovery phrase locally.</p></noscript>
+    <!-- APP_SCRIPT -->
+  </body>
+</html>
