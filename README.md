@@ -49,6 +49,8 @@ The time comparison defaults to **one total guess per second**, with 0.1 and 1,0
 
 ## Recovery
 
+To regenerate the words in BrainBIP, use your original passphrase and, if you included an email salt, the same email. You do not need that email when importing already generated words into another wallet.
+
 The generated English BIP39 phrase uses an **empty additional BIP39 passphrase**. Your original BrainBIP passphrase is already used to derive the words; do not enter it again as another wallet's additional passphrase.
 
 Use the **same word count** for recovery. The 12- and 24-word outputs lead to different wallets; do not shorten or extend either phrase. They share the same underlying calculation and are related secrets. A 24-word phrase has a larger encoding capacity, but selecting it does not add unpredictability to your inputs or raise the displayed strength estimate.

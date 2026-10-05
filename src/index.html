@@ -715,14 +715,15 @@
               </summary>
               <div class="doc-content">
                 <p>
-                  The same passphrase and email reproduce the same wallet. Both inputs use Unicode
-                  NFKC normalization. Passphrase spaces and letter case are preserved. Email
-                  whitespace at the ends is removed; its letter case is preserved.
+                  The same passphrase, email, and word count reproduce the same wallet. Both inputs
+                  use Unicode NFKC normalization. Passphrase spaces and letter case are preserved.
+                  Email whitespace at the ends is removed; its letter case is preserved.
                 </p>
                 <p>
-                  The email is optional. If you use one, you will need that same email to recover.
-                  The <strong>Private</strong> switch changes the estimate only; it never changes
-                  the recovery phrase or addresses.
+                  The email is optional. If you include one, you need the same email to regenerate
+                  your recovery words. Importing the generated words into another wallet does not
+                  require that email. The <strong>Private</strong> switch changes the estimate only;
+                  it never changes the recovery phrase or addresses.
                 </p>
               </div>
             </details>

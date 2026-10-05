@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Security reporting
-    url: https://github.com/sebayaki/BrainBIP/blob/main/SECURITY.md
-    about: Read this before sharing security-sensitive information.
+  - name: Private vulnerability reporting
+    url: https://github.com/sebayaki/BrainBIP/security/advisories
+    about: Choose Report a vulnerability to report a security issue privately.

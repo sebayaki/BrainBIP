@@ -4,9 +4,16 @@ Application versions describe the interface, packaging, and supported features. 
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-05
+
+### Added
+
+- A root security policy and reporting links that GitHub can surface to contributors.
+
 ### Fixed
 
 - Package one HTML download per release, with a checksum list covering only the included assets. The hosted site retains its index page.
+- Clarify that the original email salt is needed to regenerate recovery words in BrainBIP, while importing generated words into another wallet does not require that email.
 
 ## [0.5.2] - 2026-10-05
 
@@ -116,7 +123,8 @@ The first tagged release includes a self-contained offline app for twelve-word r
 - Monero support, keeping all four supported networks on one consistent twelve-word BIP39 recovery phrase.
 - Derivation version selection and backward compatibility, leaving one fixed strengthened algorithm.
 
-[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/sebayaki/BrainBIP/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/sebayaki/BrainBIP/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/sebayaki/BrainBIP/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/sebayaki/BrainBIP/compare/v0.4.1...v0.5.0

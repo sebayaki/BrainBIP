@@ -4,7 +4,7 @@ BrainBIP is experimental software and has not received an independent security a
 
 ## Reporting a vulnerability
 
-Use **Report a vulnerability** in the repository's [Security advisories](https://github.com/sebayaki/BrainBIP/security/advisories) when private reporting is available. If that option is unavailable, [open an issue](https://github.com/sebayaki/BrainBIP/issues/new/choose) asking for a private contact channel, without including exploit details or secrets.
+Use **Report a vulnerability** in the repository's [Security advisories](https://github.com/sebayaki/BrainBIP/security/advisories) to submit a private security report.
 
 Never submit real passphrases, email salts, recovery words, private keys, or screenshots containing them. Reproduction steps should use public test inputs and identify the affected application version or commit.
 
