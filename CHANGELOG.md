@@ -6,6 +6,20 @@ Application versions describe the interface, packaging, and supported features. 
 
 No changes yet.
 
+## [0.5.0] - 2026-10-05
+
+### Added
+
+- A neutral logarithmic time axis spanning one second to one hundred years, with a point for modelled guesswork under an explicit comparison assumption.
+- A default assumption of one total guess per second, with 0.1 and 1,000 selectable in the estimate details and the chosen rate always visible.
+- Model bits and guess counts in details, retaining the passphrase-only value alongside conditional private-email credit.
+
+### Changed
+
+- Replaced the primary bits meter with the time comparison; the rate is an assumption rather than an attacker benchmark or browser-speed measurement.
+- Present limited model coverage as a limitation instead of a confident time estimate. Comparison times use the modelled guess count divided by the selected total rate, without an average-search halving assumption.
+- Kept the private-email switch off by default, the estimate cap at 128 for both word counts, and all fixed KDF, mnemonic, and address outputs unchanged.
+
 ## [0.4.1] - 2026-10-04
 
 ### Added
@@ -85,7 +99,8 @@ The first tagged release includes a self-contained offline app for twelve-word r
 - Monero support, keeping all four supported networks on one consistent twelve-word BIP39 recovery phrase.
 - Derivation version selection and backward compatibility, leaving one fixed strengthened algorithm.
 
-[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/sebayaki/BrainBIP/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/sebayaki/BrainBIP/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/sebayaki/BrainBIP/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sebayaki/BrainBIP/compare/v0.2.0...v0.3.0

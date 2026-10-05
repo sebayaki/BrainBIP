@@ -42,8 +42,10 @@ The app requires a modern browser with WebAssembly and Web Workers, plus **512 M
 - **Eighty default addresses per phrase:** twenty per chain, with the selected path template in the address header. Changing a path derives addresses locally without repeating the heavy computation.
 - **Four network tabs:** Bitcoin, Ethereum, Solana, and Zcash, with full names and embedded SVG icons.
 - **Explicit secret controls:** reveal, hide, copy, cancel, and reset.
-- **Local guesswork estimates:** dictionary-aware feedback; the private-email switch starts **OFF** and changes the estimate only.
+- **Local guesswork comparison:** a time-axis point under an explicit assumed guessing rate, with model details and dictionary-aware feedback. The private-email switch starts **OFF** and changes the estimate only.
 - **Portable offline use:** an embedded build with checksums and third-party notices.
+
+The comparison defaults to **one total guess per second**, with 0.1 and 1,000 available in its details. Its neutral logarithmic axis spans one second to one hundred years. These are comparison assumptions, not measured attacker speeds or your browser's generation speed. Limited model coverage is shown as a limitation instead of a confident time estimate; conditional private-email credit keeps the passphrase-only estimate available. See the [estimate assumptions](docs/security.md#email-and-strength-estimates).
 
 ## Recovery
 

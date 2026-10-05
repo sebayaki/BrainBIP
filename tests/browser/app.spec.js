@@ -43,6 +43,193 @@ async function assertAllAddresses(page, expected = fixture) {
   }
 }
 
+async function installStrengthModelFixture(page) {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.testStrengthMode = 'ready';
+    window.testStrengthJobs = 0;
+    window.testWorkerCreations = 0;
+    window.Worker = class extends NativeWorker {
+      constructor(...args) {
+        super(...args);
+        this.testStopped = false;
+        window.testWorkerCreations += 1;
+      }
+      terminate() {
+        this.testStopped = true;
+        return super.terminate();
+      }
+      postMessage(data, ...rest) {
+        if (!Object.hasOwn(data, 'privateEmail')) return super.postMessage(data, ...rest);
+        window.testStrengthJobs += 1;
+        const mode = window.testStrengthMode;
+        const emailBits = data.privateEmail && data.email.trim().length > 0 ? 8 : 0;
+        const response =
+          mode === 'error'
+            ? { id: data.id, type: 'error', message: 'Public test error' }
+            : {
+                id: data.id,
+                type: 'strength',
+                result: {
+                  passphraseBits: 13.9,
+                  emailBits,
+                  combinedBits: 13.9 + emailBits,
+                  score: 0,
+                  label: 'Public model fixture',
+                  limited: mode === 'limited',
+                  feedback: ['Public test model; not measured entropy.'],
+                  emailAssumption: 'Assumes the email is private and independent.',
+                },
+              };
+        queueMicrotask(() => {
+          if (!this.testStopped) this.onmessage?.({ data: response });
+        });
+      }
+    };
+  });
+}
+
+test('guessing-time rates move the cached model marker without starting another worker', async ({
+  page,
+}, testInfo) => {
+  await installStrengthModelFixture(page);
+  await page.goto('/');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'empty');
+  await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
+  await expect(page.locator('#strength-marker')).toBeHidden();
+  expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
+  await expect(page.locator('#guess-rate')).toHaveValue('1');
+  await page.locator('#passphrase').fill('PUBLIC TIME MODEL FIXTURE ONLY');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#strength-label')).toHaveText('Model estimate');
+  await expect(page.locator('#strength-time')).toHaveText('~4 hours');
+  await expect(page.locator('#strength-marker')).toBeVisible();
+  await expect(page.locator('#guess-time-chart')).toHaveAttribute('role', 'img');
+  await expect(page.locator('#guess-time-chart')).toHaveAttribute('aria-label', /~4 hours.*total/i);
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  const position = () =>
+    page.locator('#strength-marker').evaluate((element) => parseFloat(element.style.left));
+  const initial = await position();
+  expect(initial).toBeGreaterThan(0);
+  expect(initial).toBeLessThan(100);
+  const jobs = await page.evaluate(() => [window.testStrengthJobs, window.testWorkerCreations]);
+  await page.locator('#strength-options > summary').click();
+  await expect(page.locator('#strength-bits')).toBeVisible();
+  await expect(page.locator('#strength-guesses')).not.toHaveText('—');
+  await page.locator('#guess-rate').selectOption('0.1');
+  await expect(page.locator('#strength-time')).toHaveText('~2 days');
+  await expect(page.locator('#strength-assumption')).toContainText('1 / 10 sec');
+  await expect(page.locator('#strength-assumption')).toContainText('total');
+  const slower = await position();
+  expect(slower).toBeGreaterThan(initial);
+  await page.locator('#guess-rate').selectOption('1000');
+  await expect(page.locator('#strength-time')).toHaveText('~15 seconds');
+  await expect(page.locator('#strength-assumption')).toHaveText(/total.*1,?000/i);
+  expect(await position()).toBeLessThan(initial);
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await page.waitForTimeout(350); // Catch a mistakenly scheduled estimator debounce.
+  expect(await page.evaluate(() => [window.testStrengthJobs, window.testWorkerCreations])).toEqual(
+    jobs,
+  );
+  await page
+    .locator('#strength-box')
+    .screenshot({ path: testInfo.outputPath('desktop-guess-time.png') });
+  await page.locator('#passphrase').fill('CHANGED PUBLIC TIME MODEL FIXTURE');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#guess-rate')).toHaveValue('1000');
+  await expect(page.locator('#strength-time')).toHaveText('~15 seconds');
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#guess-rate')).toHaveValue('1');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'empty');
+  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
+  expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
+  expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+});
+
+test('private-email credit stays disclosed outside estimate details and clears with the input', async ({
+  page,
+}) => {
+  await installStrengthModelFixture(page);
+  await page.goto('/');
+  await page.locator('#passphrase').fill('PUBLIC TIME MODEL FIXTURE ONLY');
+  await page.locator('#email').fill('public.mock@example.invalid');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#strength-private-note')).toBeHidden();
+  await page.locator('#private-email').click();
+  await expect(page.locator('#strength-private-note')).toBeVisible();
+  await expect(page.locator('#strength-private-note')).toContainText(
+    'assumed private, independent email',
+  );
+  expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
+  expect(
+    await page
+      .locator('#strength-private-note')
+      .evaluate((element) => element.closest('details') === null),
+  ).toBe(true);
+  await page.locator('#strength-options > summary').click();
+  await expect(page.locator('#strength-bits')).toHaveText('21.9');
+  await expect(page.locator('#strength-base-estimate')).toBeVisible();
+  await expect(page.locator('#strength-base-estimate')).toContainText('~4 hours');
+  await page.locator('#strength-options > summary').click();
+  await expect(page.locator('#strength-base-estimate')).toBeHidden();
+  await expect(page.locator('#strength-private-note')).toBeVisible();
+  await page.locator('#email').fill('');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#strength-private-note')).toBeHidden();
+  await expect(page.locator('#strength-time')).toHaveText('~4 hours');
+  await page.locator('#email').fill('public.mock@example.invalid');
+  await expect(page.locator('#strength-private-note')).toBeVisible();
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#private-email')).toHaveAttribute('aria-checked', 'false');
+  await expect(page.locator('#strength-private-note')).toBeHidden();
+});
+
+test('limited and unavailable estimates hide the time marker while retaining honest model details', async ({
+  page,
+}) => {
+  await installStrengthModelFixture(page);
+  await page.goto('/');
+  await page.locator('#passphrase').fill('PUBLIC READY MODEL FIXTURE');
+  await expect(page.locator('#strength-marker')).toBeVisible();
+  await page.evaluate(() => {
+    window.testStrengthMode = 'limited';
+  });
+  await page.locator('#passphrase').fill('PUBLIC LIMITED MODEL FIXTURE');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'estimating');
+  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'limited');
+  await expect(page.locator('#strength-time')).toHaveText('Limited estimate');
+  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-caveat')).toBeVisible();
+  await expect(page.locator('#strength-caveat')).toContainText('Time hidden');
+  await expect(page.locator('#guess-time-chart')).toHaveAttribute(
+    'aria-label',
+    /No guessing time/i,
+  );
+  await page.locator('#strength-options > summary').click();
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await expect(page.locator('#strength-guesses')).not.toHaveText('—');
+  await expect(page.locator('#strength-detail')).toContainText('limited estimate');
+  const jobs = await page.evaluate(() => window.testStrengthJobs);
+  await page.locator('#guess-rate').selectOption('1000');
+  await expect(page.locator('#strength-time')).toHaveText('Limited estimate');
+  await expect(page.locator('#strength-marker')).toBeHidden();
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => window.testStrengthJobs)).toBe(jobs);
+  await page.evaluate(() => {
+    window.testStrengthMode = 'error';
+  });
+  await page.locator('#passphrase').fill('PUBLIC UNAVAILABLE MODEL FIXTURE');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'error');
+  await expect(page.locator('#strength-label')).toHaveText('Estimate unavailable');
+  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
+  await expect(page.locator('#strength-bits')).toHaveText('—');
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#strength-label')).toHaveText('Awaiting input');
+});
+
 test('full-name chain tabs stay reachable by keyboard without moving the page vertically', async ({
   page,
 }, testInfo) => {
@@ -103,6 +290,15 @@ test('hosted edition computes the full profile offline, shows all addresses, and
   });
   await page.addInitScript(() => {
     window.testCopies = [];
+    window.testRateWorkerJobs = { strength: 0, wallet: 0 };
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      postMessage(data, ...rest) {
+        if (Object.hasOwn(data, 'privateEmail')) window.testRateWorkerJobs.strength += 1;
+        else if (Object.hasOwn(data, 'passphrase')) window.testRateWorkerJobs.wallet += 1;
+        return super.postMessage(data, ...rest);
+      }
+    };
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: async (value) => window.testCopies.push(value) },
       configurable: true,
@@ -120,6 +316,19 @@ test('hosted edition computes the full profile offline, shows all addresses, and
   await page.locator('#toggle-phrase').click();
   await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
   await assertAllAddresses(page);
+  const jobsBeforeRate = await page.evaluate(() => window.testRateWorkerJobs);
+  await page.locator('#strength-options > summary').click();
+  await page.locator('#guess-rate').selectOption('1000');
+  await expect(page.locator('#strength-assumption')).toHaveText(/total.*1,?000/i);
+  await expect(page.locator('#result-state')).toBeVisible();
+  await expect(page.locator('#mnemonic-grid .word-value')).toHaveText(fixture.mnemonic.split(' '));
+  await expect(page.locator('.address-text')).toHaveText(
+    fixture.addresses.zec.map((row) => row.address),
+  );
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => window.testRateWorkerJobs)).toEqual(jobsBeforeRate);
+  expect(jobsBeforeRate.wallet).toBe(1);
+  await page.locator('#strength-options > summary').click();
   await page.locator('#tab-btc').click();
   await page.locator('#tab-btc').press('ArrowRight');
   await expect(page.locator('#tab-eth')).toHaveAttribute('aria-selected', 'true');

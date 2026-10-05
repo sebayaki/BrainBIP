@@ -172,23 +172,74 @@
                 </p>
               </div>
 
-              <div class="strength-box" aria-label="Local guesswork estimate">
+              <div
+                id="strength-box"
+                class="strength-box"
+                data-state="empty"
+                aria-label="Local guesswork estimate"
+              >
                 <div class="strength-overview">
-                  <div>
-                    <p class="estimate-title">Estimated guesswork</p>
-                    <div class="estimate-line">
-                      <span id="strength-bits">—</span><span class="estimate-unit">bits</span>
+                  <p class="estimate-title">Illustrative guessing time</p>
+                  <span id="strength-label" class="strength-label">Awaiting input</span>
+                </div>
+                <div
+                  id="guess-time-chart"
+                  class="guess-time-chart"
+                  role="img"
+                  aria-label="Enter a passphrase for a time estimate under selected assumptions."
+                >
+                  <div class="guess-time-scale" aria-hidden="true">
+                    <span id="strength-time" class="guess-time-value">—</span>
+                    <div class="guess-time-track"></div>
+                    <div id="strength-marker" class="guess-time-marker" hidden>
+                      <span class="guess-time-stem"></span>
+                      <span class="guess-time-dot"></span>
                     </div>
-                  </div>
-                  <div class="estimate-rating">
-                    <span id="strength-label" class="strength-label">Awaiting input</span>
-                    <div id="strength-meter" class="strength-meter" aria-hidden="true">
-                      <i></i><i></i><i></i><i></i>
-                    </div>
+                    <div id="guess-time-ticks" class="guess-time-ticks"></div>
                   </div>
                 </div>
-                <p id="strength-detail" class="strength-detail" hidden></p>
-                <p class="estimate-caveat">Estimate, not measured entropy.</p>
+                <p id="strength-private-note" class="strength-private-note" hidden>
+                  Includes an assumed private, independent email.
+                </p>
+                <details id="strength-options" class="strength-options">
+                  <summary>
+                    <span id="strength-assumption">Assumed total: 1 / sec</span>
+                    <span class="strength-details-label"
+                      >Details <span class="details-toggle" aria-hidden="true">+</span></span
+                    >
+                  </summary>
+                  <div class="strength-options-content">
+                    <label for="guess-rate">Assumed total attack rate</label>
+                    <div class="guess-rate-control"><select id="guess-rate"></select></div>
+                    <p class="strength-explanation">
+                      All attacking devices combined. Comparison scenarios, not measured hardware
+                      speeds.
+                    </p>
+                    <dl class="strength-numbers">
+                      <div>
+                        <dt>Modelled guesses</dt>
+                        <dd id="strength-guesses">—</dd>
+                      </div>
+                      <div>
+                        <dt>Model bits</dt>
+                        <dd id="strength-bits">—</dd>
+                      </div>
+                    </dl>
+                    <p id="strength-base-estimate" class="strength-detail" hidden></p>
+                    <p id="strength-detail" class="strength-detail" hidden></p>
+                    <p class="strength-explanation">
+                      Logarithmic scale: equal distances mean equal time ratios. Values outside 1
+                      second–100 years sit at the nearest edge. This is not a safety score.
+                    </p>
+                  </div>
+                </details>
+                <p id="strength-caveat" class="estimate-caveat">Model estimate, not a guarantee.</p>
+                <span
+                  id="strength-announcement"
+                  class="sr-only"
+                  role="status"
+                  aria-live="polite"
+                ></span>
               </div>
 
               <div id="input-error" class="error-message" role="alert" hidden></div>
@@ -688,10 +739,17 @@
               </summary>
               <div class="doc-content">
                 <p>
+                  The time gauge divides modelled guesses by an assumed total attack rate. Its fixed
+                  logarithmic scale runs from one second to 100 years; it does not measure an attack
+                  or use this browser's generation time. Change the rate and inspect guesses and
+                  bits in the estimate details.
+                </p>
+                <p>
                   Estimated bits describe modelled guesswork, not measured entropy. Dictionary
                   words, patterns, personal information, and non-English inputs can behave
-                  differently from the model. The display is capped at 128; this is not a security
-                  guarantee.
+                  differently from the model. Limited model coverage hides the time marker. Model
+                  bits are capped at 128; neither this cap nor the end of the time axis is a
+                  security guarantee.
                 </p>
                 <p>
                   By default, an email is treated as a public salt and receives zero estimated

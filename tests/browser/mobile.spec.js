@@ -12,6 +12,76 @@ const fixture24 = JSON.parse(
 );
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 
+test('mobile guessing-time chart and native rate selection fit narrow screens without zooming', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
+  await page.locator('#passphrase').fill('password123!');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#strength-marker')).toBeVisible();
+  await expect(page.locator('#strength-time')).toHaveText(/hours?/);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    if (!(await page.locator('#strength-options').evaluate((element) => element.open))) {
+      await page.locator('#strength-options > summary').click();
+    }
+    await expect(page.locator('#guess-rate')).toBeVisible();
+    expect(await page.locator('#guess-rate').evaluate((element) => element.tagName)).toBe('SELECT');
+    expect(
+      await page
+        .locator('#guess-rate')
+        .evaluate((element) => parseFloat(getComputedStyle(element).fontSize)),
+    ).toBeGreaterThanOrEqual(16);
+    expect((await page.locator('#guess-rate').boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await page.locator('#guess-rate').focus();
+    expect(await page.evaluate(() => window.visualViewport.scale)).toBe(1);
+    await page.locator('#guess-rate').selectOption('1000');
+    await expect(page.locator('#strength-time')).toHaveText(/seconds?/);
+    await expect(page.locator('#strength-assumption')).toHaveText(/total.*1,?000/i);
+    await page.locator('#guess-rate').blur();
+    await page.waitForTimeout(400); // The visual point and its label transition together.
+    const chartFits = await page.locator('#guess-time-chart').evaluate((chart) => {
+      const bounds = chart.getBoundingClientRect();
+      const labels = chart.querySelectorAll('.guess-time-tick, #strength-time');
+      return [...labels].every((label) => {
+        if (getComputedStyle(label).display === 'none') return true;
+        const box = label.getBoundingClientRect();
+        return box.left >= bounds.left - 1 && box.right <= bounds.right + 1;
+      });
+    });
+    expect(chartFits).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.locator('#strength-box').screenshot({
+      path: testInfo.outputPath(`webkit-guess-time-${width}.png`),
+      caret: 'initial',
+    });
+    await page.locator('#guess-rate').selectOption('1');
+  }
+  await page.locator('#passphrase').fill('PUBLIC_RANDOM_TEST_ONLY_aJ7!qZ9?mL4#vK8$rN6@xP3');
+  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
+  await expect(page.locator('#strength-time')).toHaveText(/years?/);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    const labelFits = await page.locator('#strength-time').evaluate((label) => {
+      const chart = document.getElementById('guess-time-chart').getBoundingClientRect();
+      const bounds = label.getBoundingClientRect();
+      return bounds.left >= chart.left - 1 && bounds.right <= chart.right + 1;
+    });
+    expect(labelFits).toBe(true);
+  }
+  await page.locator('#reset-button').click();
+  await expect(page.locator('#guess-rate')).toHaveValue('1');
+  expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
+  await expect(page.locator('#strength-marker')).toBeHidden();
+});
+
 test('mobile WebKit keeps controls readable, zoom available, and the layout inside the viewport', async ({
   page,
 }, testInfo) => {

@@ -20,7 +20,15 @@ Email is a **public salt by default**, with zero estimated secret strength. A sa
 
 The private-email switch starts **OFF**. Turning it on changes only the displayed estimate, never normalization, salts, recovery words, or addresses. The optional credit assumes the email name is unknown to an attacker and independent of the passphrase. The app cannot verify those assumptions. Exposure of the email removes that assumed benefit.
 
-The estimator reports modelled guesswork, not measured entropy. Its private-email model excludes the domain, letter case, and `+tags`, rejects obvious overlap, and caps conditional credit at 32 estimate bits. The combined display is capped at 128 for **both word counts**. The estimate evaluates the inputs, so switching to 24 words does not raise it. Neither cap is a calibrated security guarantee. English dictionaries have limited coverage for other languages, personal references, and unfamiliar patterns; long inputs are evaluated under a bounded model and marked as limited.
+The estimator reports modelled guesswork, not measured entropy. Its private-email model excludes the domain, letter case, and `+tags`, rejects obvious overlap, and caps conditional credit at 32 estimate bits. Details retain the passphrase-only value alongside any conditional email credit. The combined model is capped at 128 estimate bits for **both word counts**. The estimate evaluates the inputs, so switching to 24 words does not raise it. Neither cap is a calibrated security guarantee.
+
+The primary display compares that modelled guess count with an **assumed total guessing rate**. The default is one guess per second; details offer 0.1, 1, or 1,000 total guesses per second. The chosen rate stays visible. It represents the assumed combined rate of the entire attack, not a rate per device. It is not derived from this browser's running time, an attacker benchmark, or measured hardware capacity.
+
+The comparison divides the modelled guess count by the chosen rate. It does not halve the count to report an average search time. The count is a model's estimate of guesswork, not an exhaustive set of equally likely passwords; the resulting time is neither a prediction of when a wallet will be found nor a guaranteed minimum. A better guessing model, knowledge of personal information, or a different total attack rate can change the result substantially.
+
+A neutral point sits on a fixed **logarithmic axis from one second to one hundred years**. Equal distances represent equal time ratios. The axis is a comparison scale, not completion progress or a safety rating; values outside its range reach an endpoint rather than stretching the scale. Model bits and guess counts appear in the details, along with the assumptions behind conditional private-email credit.
+
+English dictionaries have limited coverage for other languages, personal references, and unfamiliar patterns. Long inputs are evaluated under a bounded model and marked as limited. When the app identifies limited coverage, it shows that limitation instead of a confident time comparison. Even an unflagged input can contain a pattern or reference the model misses.
 
 ## Offline execution and secrets
 
