@@ -6,6 +6,12 @@ Application versions describe the interface, packaging, and supported features. 
 
 No changes yet.
 
+## [0.5.2] - 2026-10-05
+
+### Fixed
+
+- Corrected the reset icon's arrowhead to follow the circular stroke naturally at small sizes. Reset behavior and wallet derivation are unchanged.
+
 ## [0.5.1] - 2026-10-05
 
 ### Changed
@@ -108,7 +114,8 @@ The first tagged release includes a self-contained offline app for twelve-word r
 - Monero support, keeping all four supported networks on one consistent twelve-word BIP39 recovery phrase.
 - Derivation version selection and backward compatibility, leaving one fixed strengthened algorithm.
 
-[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/sebayaki/BrainBIP/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/sebayaki/BrainBIP/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/sebayaki/BrainBIP/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/sebayaki/BrainBIP/compare/v0.4.0...v0.4.1
