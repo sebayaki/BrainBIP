@@ -47,6 +47,7 @@ async function installStrengthModelFixture(page) {
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
     window.testStrengthMode = 'ready';
+    window.testStrengthBits = 13.9;
     window.testStrengthJobs = 0;
     window.testWorkerCreations = 0;
     window.Worker = class extends NativeWorker {
@@ -63,7 +64,19 @@ async function installStrengthModelFixture(page) {
         if (!Object.hasOwn(data, 'privateEmail')) return super.postMessage(data, ...rest);
         window.testStrengthJobs += 1;
         const mode = window.testStrengthMode;
+        const passphraseBits = window.testStrengthBits;
         const emailBits = data.privateEmail && data.email.trim().length > 0 ? 8 : 0;
+        const combinedBits = Math.min(128, passphraseBits + emailBits);
+        const score =
+          combinedBits < 20
+            ? 0
+            : combinedBits < 40
+              ? 1
+              : combinedBits < 64
+                ? 2
+                : combinedBits < 96
+                  ? 3
+                  : 4;
         const response =
           mode === 'error'
             ? { id: data.id, type: 'error', message: 'Public test error' }
@@ -71,11 +84,14 @@ async function installStrengthModelFixture(page) {
                 id: data.id,
                 type: 'strength',
                 result: {
-                  passphraseBits: 13.9,
+                  passphraseBits,
                   emailBits,
-                  combinedBits: 13.9 + emailBits,
-                  score: 0,
-                  label: 'Public model fixture',
+                  combinedBits,
+                  score,
+                  label:
+                    mode === 'limited'
+                      ? 'Limited guesswork estimate'
+                      : `${['Very low', 'Low', 'Moderate', 'Higher', 'High'][score]} guesswork estimate`,
                   limited: mode === 'limited',
                   feedback: ['Public test model; not measured entropy.'],
                   emailAssumption: 'Assumes the email is private and independent.',
@@ -89,44 +105,48 @@ async function installStrengthModelFixture(page) {
   });
 }
 
-test('guessing-time rates move the cached model marker without starting another worker', async ({
+test('guessing-time rates change cached time while visible bits and the meter stay unchanged', async ({
   page,
 }, testInfo) => {
   await installStrengthModelFixture(page);
   await page.goto('/');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'empty');
   await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#guess-time-chart, #strength-marker, .guess-time-tick')).toHaveCount(
+    0,
+  );
+  await expect(page.locator('#strength-bits')).toBeVisible();
+  await expect(page.locator('#strength-meter i')).toHaveCount(4);
   expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
   await expect(page.locator('#guess-rate')).toHaveValue('1');
   await page.locator('#passphrase').fill('PUBLIC TIME MODEL FIXTURE ONLY');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('#strength-label')).toHaveText('Model estimate');
+  await expect(page.locator('#strength-label')).toHaveText('Very low');
   await expect(page.locator('#strength-time')).toHaveText('~4 hours');
-  await expect(page.locator('#strength-marker')).toBeVisible();
-  await expect(page.locator('#guess-time-chart')).toHaveAttribute('role', 'img');
-  await expect(page.locator('#guess-time-chart')).toHaveAttribute('aria-label', /~4 hours.*total/i);
+  await expect(page.locator('#strength-time-row')).toBeVisible();
+  expect(await page.locator('#strength-time-row').getAttribute('role')).not.toBe('img');
+  await expect(page.locator('#strength-time')).toHaveAttribute('aria-label', /~4 hours.*total/i);
   await expect(page.locator('#strength-bits')).toHaveText('13.9');
-  const position = () =>
-    page.locator('#strength-marker').evaluate((element) => parseFloat(element.style.left));
-  const initial = await position();
-  expect(initial).toBeGreaterThan(0);
-  expect(initial).toBeLessThan(100);
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
+  expect(
+    await page.locator('#strength-bits').evaluate((element) => element.closest('details') === null),
+  ).toBe(true);
   const jobs = await page.evaluate(() => [window.testStrengthJobs, window.testWorkerCreations]);
   await page.locator('#strength-options > summary').click();
   await expect(page.locator('#strength-bits')).toBeVisible();
   await expect(page.locator('#strength-guesses')).not.toHaveText('—');
   await page.locator('#guess-rate').selectOption('0.1');
   await expect(page.locator('#strength-time')).toHaveText('~2 days');
-  await expect(page.locator('#strength-assumption')).toContainText('1 / 10 sec');
+  await expect(page.locator('#strength-assumption')).toHaveText(/1(?: guess)? \/ 10 sec/);
   await expect(page.locator('#strength-assumption')).toContainText('total');
-  const slower = await position();
-  expect(slower).toBeGreaterThan(initial);
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
   await page.locator('#guess-rate').selectOption('1000');
   await expect(page.locator('#strength-time')).toHaveText('~15 seconds');
   await expect(page.locator('#strength-assumption')).toHaveText(/total.*1,?000/i);
-  expect(await position()).toBeLessThan(initial);
   await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
+  await expect(page.locator('#strength-label')).toHaveText('Very low');
   await page.waitForTimeout(350); // Catch a mistakenly scheduled estimator debounce.
   expect(await page.evaluate(() => [window.testStrengthJobs, window.testWorkerCreations])).toEqual(
     jobs,
@@ -138,10 +158,46 @@ test('guessing-time rates move the cached model marker without starting another 
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#guess-rate')).toHaveValue('1000');
   await expect(page.locator('#strength-time')).toHaveText('~15 seconds');
+  await page.evaluate(() => {
+    window.testStrengthBits = 128;
+  });
+  await page.locator('#passphrase').fill('PUBLIC MAXIMUM MODEL FIXTURE ONLY');
+  await expect(page.locator('#strength-bits')).toHaveText('128');
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '4');
+  await expect(page.locator('#strength-label')).toHaveText('High');
+  const maximumJobs = await page.evaluate(() => [
+    window.testStrengthJobs,
+    window.testWorkerCreations,
+  ]);
+  const years = {};
+  for (const rate of ['0.1', '1', '1000']) {
+    await page.locator('#guess-rate').selectOption(rate);
+    await expect(page.locator('#strength-time')).toHaveText(/^~\d{1,3}(?:,\d{3})+ years$/);
+    const text = await page.locator('#strength-time').textContent();
+    expect(text).not.toMatch(/>\s*100|e[+-]|million|billion|trillion/i);
+    years[rate] = Number(text.replace(/[^\d]/gu, ''));
+    expect(years[rate] / (2 ** 128 / Number(rate) / 31557600)).toBeCloseTo(1, 12);
+    await expect(page.locator('#strength-time')).toHaveAttribute(
+      'aria-label',
+      new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    );
+    await expect(page.locator('#strength-bits')).toHaveText('128');
+    await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '4');
+  }
+  expect(years['0.1'] / years['1']).toBeCloseTo(10, 8);
+  expect(years['1'] / years['1000']).toBeCloseTo(1000, 8);
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(() => [window.testStrengthJobs, window.testWorkerCreations])).toEqual(
+    maximumJobs,
+  );
+  await page
+    .locator('#strength-box')
+    .screenshot({ path: testInfo.outputPath('desktop-estimate-full-years.png') });
   await page.locator('#reset-button').click();
   await expect(page.locator('#guess-rate')).toHaveValue('1');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'empty');
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-bits')).toHaveText('—');
+  expect(await page.locator('#strength-meter').getAttribute('data-score')).toBeNull();
   await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
   expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
   expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
@@ -174,6 +230,8 @@ test('private-email credit stays disclosed outside estimate details and clears w
   await page.locator('#strength-options > summary').click();
   await expect(page.locator('#strength-base-estimate')).toBeHidden();
   await expect(page.locator('#strength-private-note')).toBeVisible();
+  await expect(page.locator('#strength-bits')).toBeVisible();
+  await expect(page.locator('#strength-bits')).toHaveText('21.9');
   await page.locator('#email').fill('');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
   await expect(page.locator('#strength-private-note')).toBeHidden();
@@ -185,28 +243,29 @@ test('private-email credit stays disclosed outside estimate details and clears w
   await expect(page.locator('#strength-private-note')).toBeHidden();
 });
 
-test('limited and unavailable estimates hide the time marker while retaining honest model details', async ({
+test('limited and unavailable estimates avoid time claims while keeping the bits honest', async ({
   page,
 }) => {
   await installStrengthModelFixture(page);
   await page.goto('/');
   await page.locator('#passphrase').fill('PUBLIC READY MODEL FIXTURE');
-  await expect(page.locator('#strength-marker')).toBeVisible();
+  await expect(page.locator('#strength-time')).toHaveText('~4 hours');
+  await expect(page.locator('#strength-bits')).toBeVisible();
   await page.evaluate(() => {
     window.testStrengthMode = 'limited';
   });
   await page.locator('#passphrase').fill('PUBLIC LIMITED MODEL FIXTURE');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'estimating');
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'limited');
   await expect(page.locator('#strength-time')).toHaveText('Limited estimate');
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-label')).toHaveText('Limited estimate');
+  await expect(page.locator('#strength-bits')).toBeVisible();
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
   await expect(page.locator('#strength-caveat')).toBeVisible();
   await expect(page.locator('#strength-caveat')).toContainText('Time hidden');
-  await expect(page.locator('#guess-time-chart')).toHaveAttribute(
-    'aria-label',
-    /No guessing time/i,
-  );
+  await expect(page.locator('#strength-time')).toHaveAttribute('aria-label', /No guessing time/i);
   await page.locator('#strength-options > summary').click();
   await expect(page.locator('#strength-bits')).toHaveText('13.9');
   await expect(page.locator('#strength-guesses')).not.toHaveText('—');
@@ -214,7 +273,8 @@ test('limited and unavailable estimates hide the time marker while retaining hon
   const jobs = await page.evaluate(() => window.testStrengthJobs);
   await page.locator('#guess-rate').selectOption('1000');
   await expect(page.locator('#strength-time')).toHaveText('Limited estimate');
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
   await page.waitForTimeout(350);
   expect(await page.evaluate(() => window.testStrengthJobs)).toBe(jobs);
   await page.evaluate(() => {
@@ -223,7 +283,7 @@ test('limited and unavailable estimates hide the time marker while retaining hon
   await page.locator('#passphrase').fill('PUBLIC UNAVAILABLE MODEL FIXTURE');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'error');
   await expect(page.locator('#strength-label')).toHaveText('Estimate unavailable');
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  expect(await page.locator('#strength-meter').getAttribute('data-score')).toBeNull();
   await expect(page.locator('#strength-time')).toHaveText(/^(?:—|--)$/);
   await expect(page.locator('#strength-bits')).toHaveText('—');
   await page.locator('#reset-button').click();

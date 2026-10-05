@@ -19,9 +19,11 @@ export const GUESS_RATES = Object.freeze([
 ]);
 
 const SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60;
-const MAX_SECONDS = 100 * SECONDS_PER_YEAR;
-const MAX_LOG_SECONDS = Math.log10(MAX_SECONDS);
 const countFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
+const yearFormat = new Intl.NumberFormat('en-US', {
+  notation: 'standard',
+  maximumFractionDigits: 0,
+});
 
 function validateBits(bits) {
   if (typeof bits !== 'number' || !Number.isFinite(bits)) {
@@ -42,12 +44,16 @@ function validateRate(rate) {
 }
 
 function formatDuration(seconds) {
+  if (seconds < 1) return '< 1 second';
+  if (seconds >= SECONDS_PER_YEAR) {
+    const years = seconds / SECONDS_PER_YEAR;
+    return `~${yearFormat.format(years)} ${Math.round(years) === 1 ? 'year' : 'years'}`;
+  }
   const units = [
     [60, 1, 'second'],
     [3600, 60, 'minute'],
     [86400, 3600, 'hour'],
     [SECONDS_PER_YEAR, 86400, 'day'],
-    [Infinity, SECONDS_PER_YEAR, 'year'],
   ];
   const [, divisor, unit] = units.find(([limit]) => seconds < limit);
   const value = Math.round(seconds / divisor);
@@ -61,14 +67,7 @@ export function getGuessTime(bits, rate = DEFAULT_GUESS_RATE) {
   validateRate(rate);
 
   const seconds = 2 ** bits / rate;
-  // Compare in the input's logarithmic domain so an exact endpoint does not
-  // become outside the scale through floating-point exponentiation rounding.
-  const range =
-    bits < Math.log2(rate) ? 'below' : bits > Math.log2(MAX_SECONDS * rate) ? 'above' : 'within';
-  const position = Math.max(0, Math.min(100, (Math.log10(seconds) / MAX_LOG_SECONDS) * 100));
-  const label =
-    range === 'below' ? '< 1 second' : range === 'above' ? '> 100 years' : formatDuration(seconds);
-  return { seconds, position, label, range };
+  return { seconds, label: formatDuration(seconds) };
 }
 
 export function formatGuessCount(bits) {

@@ -19,24 +19,14 @@ export function createStrengthController({ getElement: $, getInputs, nextJobId, 
     option.defaultSelected = choice.value === DEFAULT_GUESS_RATE;
     rateSelect.append(option);
   }
-  const year = 365.25 * 86400;
-  const ticks = [
-    [1, '1 sec'],
-    [60, '1 min', true],
-    [3600, '1 hour'],
-    [86400, '1 day', 'mid'],
-    [year, '1 year', 'wide'],
-    [100 * year, '100 years'],
-  ];
-  ticks.forEach(([seconds, label, optional]) => {
-    const tick = document.createElement('span');
-    tick.textContent = label;
-    tick.className = optional
-      ? `guess-time-tick guess-time-tick-${typeof optional === 'string' ? optional : 'extra'}`
-      : 'guess-time-tick';
-    tick.style.left = `${getGuessTime(Math.log2(seconds), 1).position}%`;
-    $('guess-time-ticks').append(tick);
-  });
+  function renderDuration(label) {
+    const value = $('strength-time');
+    value.replaceChildren();
+    label.split(',').forEach((part, index) => {
+      if (index > 0) value.append(',', document.createElement('wbr'));
+      value.append(part);
+    });
+  }
   function renderRate() {
     rateSelect.value = String(rate);
     const choice = GUESS_RATES.find((entry) => entry.value === rate);
@@ -52,10 +42,8 @@ export function createStrengthController({ getElement: $, getInputs, nextJobId, 
     $('strength-box').dataset.state = state;
     $('strength-label').textContent = label;
     $('strength-time').textContent = '—';
-    $('strength-time').style.removeProperty('left');
-    $('strength-marker').hidden = true;
-    $('strength-marker').style.removeProperty('left');
-    $('guess-time-chart').setAttribute('aria-label', label);
+    $('strength-time').setAttribute('aria-label', label);
+    $('strength-meter').removeAttribute('data-score');
     $('strength-bits').textContent = '—';
     $('strength-guesses').textContent = '—';
     $('strength-feedback').textContent =
@@ -73,19 +61,12 @@ export function createStrengthController({ getElement: $, getInputs, nextJobId, 
   function renderTime() {
     renderRate();
     if (!result) return;
-    const { displayBits, passphraseBits, emailBits, limited } = result;
+    const { displayBits, passphraseBits, emailBits, limited, label, score } = result;
     const time = getGuessTime(displayBits, rate);
-    $('strength-time').textContent = limited ? 'Limited estimate' : time.label;
+    renderDuration(limited ? 'Limited estimate' : time.label);
     $('strength-box').dataset.state = limited ? 'limited' : 'ready';
-    $('strength-label').textContent = limited ? 'Limited coverage' : 'Model estimate';
-    $('strength-marker').hidden = limited;
-    if (!limited) {
-      $('strength-marker').style.left = `${time.position}%`;
-      $('strength-time').style.left =
-        `clamp(var(--guess-label-inset), ${time.position}%, calc(100% - var(--guess-label-inset)))`;
-    } else {
-      $('strength-time').style.removeProperty('left');
-    }
+    $('strength-label').textContent = label;
+    $('strength-meter').dataset.score = String(score);
     $('strength-private-note').hidden = emailBits <= 0;
     $('strength-caveat').textContent = limited
       ? 'Time hidden: language or length exceeds model coverage.'
@@ -98,7 +79,7 @@ export function createStrengthController({ getElement: $, getInputs, nextJobId, 
     const explanation = limited
       ? 'Limited model coverage. No guessing time is shown.'
       : `${time.label} at an assumed total rate of ${rateLabel}. ${emailBits > 0 ? 'Includes an assumed private, independent email. ' : ''}Model estimate, not a guarantee.`;
-    $('guess-time-chart').setAttribute('aria-label', explanation);
+    $('strength-time').setAttribute('aria-label', explanation);
     $('strength-announcement').textContent = explanation;
   }
   function render(data) {
@@ -120,7 +101,12 @@ export function createStrengthController({ getElement: $, getInputs, nextJobId, 
       unavailable();
       return;
     }
-    result = { displayBits, passphraseBits, emailBits, limited: Boolean(data.limited) };
+    const limited = Boolean(data.limited);
+    const score = Math.max(0, Math.min(limited ? 2 : 4, Number(data.score) || 0));
+    const label = limited
+      ? 'Limited estimate'
+      : String(data.label || 'Estimate ready').replace(' guesswork estimate', '');
+    result = { displayBits, passphraseBits, emailBits, limited, label, score };
     $('strength-bits').textContent = formatBits(displayBits);
     $('strength-guesses').textContent = formatGuessCount(displayBits);
     const feedback = Array.isArray(data.feedback) ? data.feedback.join(' ') : data.feedback;

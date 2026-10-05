@@ -30,71 +30,60 @@ test('13.9-bit model illustrates days, hours and seconds using the full guess co
   assert.ok(Math.abs(fast.seconds - 15.2868125) < 0.000001);
   assert.deepEqual([slow.label, normal.label, fast.label], ['~2 days', '~4 hours', '~15 seconds']);
   assert.equal(formatGuessCount(13.9), '~15,000 guesses');
-  assert.ok(slow.position > normal.position && normal.position > fast.position);
-  assert.ok([slow, normal, fast].every(({ range }) => range === 'within'));
 });
 
-test('fixed logarithmic scale gives equal spacing to equal orders of magnitude', () => {
-  const tenSeconds = getGuessTime(Math.log2(10));
-  const hundredSeconds = getGuessTime(Math.log2(100));
-  const thousandSeconds = getGuessTime(Math.log2(1000));
-  assert.ok(tenSeconds.position > 0 && thousandSeconds.position < 100);
-  assert.ok(
-    Math.abs(
-      hundredSeconds.position -
-        tenSeconds.position -
-        (thousandSeconds.position - hundredSeconds.position),
-    ) < 1e-10,
-  );
-  assert.equal(getGuessTime(Math.log2(1000), 1000).position, 0);
+test('uses the full guess count without an average-search or graph-scale assumption', () => {
+  assert.deepEqual(getGuessTime(2), { seconds: 4, label: '~4 seconds' });
+  assert.deepEqual(getGuessTime(2, 0.1), { seconds: 40, label: '~40 seconds' });
+  assert.deepEqual(getGuessTime(2, 1000), { seconds: 0.004, label: '< 1 second' });
 });
 
-test('increasing the model guess count moves monotonically along the same axis', () => {
+test('increasing the model guess count always increases time at a fixed assumed rate', () => {
   for (const { value: rate } of GUESS_RATES) {
     let previous = -1;
     for (const bits of [0, 1, 4, 8, 16, 24, 32, 64, 128]) {
       const result = getGuessTime(bits, rate);
-      assert.ok(result.position >= previous);
-      assert.ok(result.position >= 0 && result.position <= 100);
-      previous = result.position;
+      assert.ok(result.seconds > previous);
+      previous = result.seconds;
     }
   }
 });
 
-test('subsecond and century-overflow scenarios retain their actual seconds and clamp the marker', () => {
+test('subsecond values retain actual seconds and one second remains a normal duration', () => {
   assert.deepEqual(getGuessTime(0, 1000), {
     seconds: 0.001,
-    position: 0,
     label: '< 1 second',
-    range: 'below',
   });
-  const largest = getGuessTime(128);
-  assert.ok(largest.seconds > 3e38);
-  assert.equal(largest.position, 100);
-  assert.equal(largest.label, '> 100 years');
-  assert.equal(largest.range, 'above');
+  assert.deepEqual(getGuessTime(0), { seconds: 1, label: '~1 second' });
+  assert.equal(getGuessTime(Math.log2(1000), 1000).label, '~1 second');
+  assert.equal(getGuessTime(Math.log2(1000) - 0.001, 1000).label, '< 1 second');
 });
 
-test('one second and 100 Julian years remain inside the scale at their exact boundaries', () => {
-  const oneSecond = getGuessTime(0);
-  assert.equal(oneSecond.label, '~1 second');
-  assert.equal(oneSecond.range, 'within');
-  assert.equal(oneSecond.position, 0);
-
-  const hundredYears = 3_155_760_000;
+test('year labels continue beyond a century and use comma-separated whole Julian years', () => {
+  const thousandYears = 31_557_600_000;
   for (const { value: rate } of GUESS_RATES) {
-    const boundaryBits = Math.log2(hundredYears * rate);
-    const boundary = getGuessTime(boundaryBits, rate);
-    assert.equal(boundary.range, 'within');
-    assert.equal(boundary.label, '~100 years');
-    assert.ok(Math.abs(boundary.seconds - hundredYears) < 0.00001);
-    assert.ok(Math.abs(boundary.position - 100) < 1e-10);
-    assert.equal(getGuessTime(boundaryBits - 0.001, rate).range, 'within');
-    assert.equal(getGuessTime(boundaryBits + 0.001, rate).range, 'above');
+    const result = getGuessTime(Math.log2(thousandYears * rate), rate);
+    assert.equal(result.label, '~1,000 years');
+    assert.ok(Math.abs(result.seconds - thousandYears) < 0.0001);
   }
-  const fastOneSecond = Math.log2(1000);
-  assert.equal(getGuessTime(fastOneSecond, 1000).range, 'within');
-  assert.equal(getGuessTime(fastOneSecond - 0.001, 1000).range, 'below');
+  assert.equal(getGuessTime(Math.log2(3_155_760_000)).label, '~100 years');
+});
+
+test('96-bit and 128-bit estimates show every approximate year digit at all supported rates', () => {
+  const fixtures = [
+    [96, 0.1, '~25,105,889,710,961,650,000,000 years'],
+    [96, 1, '~2,510,588,971,096,165,000,000 years'],
+    [96, 1000, '~2,510,588,971,096,165,000 years'],
+    [128, 0.1, '~107,828,975,245,563,180,000,000,000,000,000 years'],
+    [128, 1, '~10,782,897,524,556,317,000,000,000,000,000 years'],
+    [128, 1000, '~10,782,897,524,556,317,000,000,000,000 years'],
+  ];
+  for (const [bits, rate, label] of fixtures) {
+    const result = getGuessTime(bits, rate);
+    assert.equal(result.label, label);
+    assert.match(result.label, /^~\d{1,3}(,\d{3})+ years$/);
+    assert.ok(Number.isFinite(result.seconds));
+  }
 });
 
 test('duration labels use familiar units with correct singular forms', () => {

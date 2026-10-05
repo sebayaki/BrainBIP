@@ -396,8 +396,6 @@ input::placeholder {
 }
 
 .strength-box {
-  --guess-label-inset: 96px;
-  container-type: inline-size;
   padding: 24px 0;
   margin: 8px 0 24px;
   border-top: 1px solid var(--line);
@@ -411,7 +409,7 @@ input::placeholder {
   flex-wrap: wrap;
 }
 .estimate-title {
-  margin: 0;
+  margin: 0 0 8px;
   font-size: 12px;
   color: var(--muted);
 }
@@ -421,106 +419,72 @@ input::placeholder {
   line-height: 1.5;
   color: var(--muted);
 }
-.guess-time-chart {
-  padding: 0 8px;
-  margin: 20px 0 4px;
+.estimate-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
-.guess-time-scale {
-  position: relative;
-  height: 100px;
-}
-.guess-time-value {
-  position: absolute;
-  top: 0;
-  left: 0;
-  color: var(--ink);
+#strength-bits {
   font-family: var(--mono);
-  font-size: 24px;
-  line-height: 32px;
-  letter-spacing: -1px;
-  white-space: nowrap;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: -1.5px;
 }
-.strength-box[data-state='ready'] .guess-time-value {
-  transform: translateX(-50%);
-}
-.strength-box[data-state='limited'] .guess-time-value {
-  font-family: var(--sans);
-  font-size: 20px;
-  letter-spacing: -0.4px;
-}
-.guess-time-track {
-  position: absolute;
-  inset: 52px 0 auto;
-  height: 4px;
-  border-radius: 2px;
-  background: #dfe5d8;
-}
-.guess-time-marker {
-  position: absolute;
-  top: 54px;
-  width: 10px;
-  height: 10px;
-  transform: translate(-50%, -50%);
-}
-.guess-time-dot {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 0 5px #2f6b4514;
-}
-.guess-time-stem {
-  position: absolute;
-  width: 1px;
-  height: 12px;
-  top: -17px;
-  left: 5px;
-  background: #8aab83;
-}
-.guess-time-tick {
-  position: absolute;
-  top: 71px;
-  transform: translateX(-50%);
+.estimate-unit {
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 11px;
-  line-height: 16px;
-  white-space: nowrap;
+  font-size: 12px;
 }
-.guess-time-tick:first-child {
-  transform: none;
+.estimate-rating {
+  max-width: 47%;
+  text-align: right;
 }
-.guess-time-tick:last-child {
-  transform: translateX(-100%);
+.strength-meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: 96px;
+  margin: 8px 0 0 auto;
 }
-.guess-time-tick-extra,
-.guess-time-tick-mid,
-.guess-time-tick-wide {
-  display: none;
+.strength-meter i {
+  height: 3px;
+  background: #e0e6d9;
+  border-radius: 2px;
 }
-@container (min-width: 300px) {
-  .guess-time-tick-mid {
-    display: block;
-  }
+.strength-meter[data-score='0'] i:first-child,
+.strength-meter[data-score='1'] i:first-child {
+  background: #ad745d;
 }
-@container (min-width: 420px) {
-  .guess-time-tick-extra {
-    display: block;
-  }
+.strength-meter[data-score='2'] i:nth-child(-n + 2) {
+  background: #af9457;
 }
-@container (min-width: 500px) {
-  .guess-time-tick-wide {
-    display: block;
-  }
+.strength-meter[data-score='3'] i:nth-child(-n + 3) {
+  background: #7b9a66;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .strength-box[data-state='ready'] .guess-time-marker,
-  .strength-box[data-state='ready'] .guess-time-value {
-    transition: left 350ms ease;
-  }
+.strength-meter[data-score='4'] i {
+  background: #4c8351;
+}
+.strength-time-row {
+  display: grid;
+  gap: 4px;
+  margin: 20px 0 4px;
+}
+.strength-time-caption {
+  color: var(--muted);
+  font-size: 12px;
+}
+.strength-time-value {
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.strength-box[data-state='limited'] .strength-time-value {
+  font-family: var(--sans);
+  font-size: 16px;
 }
 .strength-options > summary {
   display: flex;
@@ -2005,12 +1969,14 @@ input::placeholder {
     margin-bottom: 24px;
   }
   .strength-box {
-    --guess-label-inset: 80px;
     padding: 24px 0;
     margin: 0 0 24px;
   }
-  .guess-time-value {
-    font-size: 21px;
+  #strength-bits {
+    font-size: 32px;
+  }
+  .strength-time-value {
+    font-size: 18px;
   }
   .estimate-title,
   .strength-label,

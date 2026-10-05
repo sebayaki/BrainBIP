@@ -12,15 +12,53 @@ const fixture24 = JSON.parse(
 );
 const offlineURL = new URL('../../dist/brainbip.html', import.meta.url).href;
 
-test('mobile guessing-time chart and native rate selection fit narrow screens without zooming', async ({
+test('mobile estimates and native rate selection show full values without overflow or zooming', async ({
   page,
 }, testInfo) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.testMobileStrengthBits = 13.9;
+    window.Worker = class extends NativeWorker {
+      postMessage(data, ...rest) {
+        if (!Object.hasOwn(data, 'privateEmail')) return super.postMessage(data, ...rest);
+        const bits = window.testMobileStrengthBits;
+        const result = {
+          passphraseBits: bits,
+          emailBits: 0,
+          combinedBits: bits,
+          score: bits === 128 ? 4 : 0,
+          label: bits === 128 ? 'High guesswork estimate' : 'Very low guesswork estimate',
+          limited: false,
+          feedback: ['Public model fixture; not measured entropy.'],
+        };
+        queueMicrotask(() => this.onmessage?.({ data: { id: data.id, type: 'strength', result } }));
+      }
+    };
+  });
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
-  await page.locator('#passphrase').fill('password123!');
+  await page.locator('#passphrase').fill('PUBLIC MOBILE MODEL FIXTURE ONLY');
   await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('#strength-marker')).toBeVisible();
-  await expect(page.locator('#strength-time')).toHaveText(/hours?/);
+  await expect(page.locator('#strength-bits')).toBeVisible();
+  await expect(page.locator('#strength-bits')).toHaveText('13.9');
+  await expect(page.locator('#strength-meter i')).toHaveCount(4);
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
+  await expect(page.locator('#strength-time')).toHaveText('~4 hours');
+  await expect(page.locator('#guess-time-chart, #strength-marker, .guess-time-tick')).toHaveCount(
+    0,
+  );
+  const timeFits = () =>
+    page.locator('#strength-time').evaluate((value) => {
+      const row = document.getElementById('strength-time-row').getBoundingClientRect();
+      const bounds = value.getBoundingClientRect();
+      return (
+        bounds.left >= row.left - 1 &&
+        bounds.right <= row.right + 1 &&
+        bounds.bottom <= row.bottom + 1 &&
+        (!value.clientWidth || value.scrollWidth <= value.clientWidth + 1) &&
+        getComputedStyle(value).textOverflow !== 'ellipsis'
+      );
+    });
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
     if (!(await page.locator('#strength-options').evaluate((element) => element.open))) {
@@ -37,49 +75,57 @@ test('mobile guessing-time chart and native rate selection fit narrow screens wi
     await page.locator('#guess-rate').focus();
     expect(await page.evaluate(() => window.visualViewport.scale)).toBe(1);
     await page.locator('#guess-rate').selectOption('1000');
-    await expect(page.locator('#strength-time')).toHaveText(/seconds?/);
+    await expect(page.locator('#strength-time')).toHaveText('~15 seconds');
     await expect(page.locator('#strength-assumption')).toHaveText(/total.*1,?000/i);
+    await expect(page.locator('#strength-bits')).toHaveText('13.9');
+    await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '0');
     await page.locator('#guess-rate').blur();
-    await page.waitForTimeout(400); // The visual point and its label transition together.
-    const chartFits = await page.locator('#guess-time-chart').evaluate((chart) => {
-      const bounds = chart.getBoundingClientRect();
-      const labels = chart.querySelectorAll('.guess-time-tick, #strength-time');
-      return [...labels].every((label) => {
-        if (getComputedStyle(label).display === 'none') return true;
-        const box = label.getBoundingClientRect();
-        return box.left >= bounds.left - 1 && box.right <= bounds.right + 1;
-      });
-    });
-    expect(chartFits).toBe(true);
+    expect(await timeFits()).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     await page.locator('#strength-box').screenshot({
-      path: testInfo.outputPath(`webkit-guess-time-${width}.png`),
+      path: testInfo.outputPath('webkit-guess-time-' + width + '.png'),
       caret: 'initial',
     });
     await page.locator('#guess-rate').selectOption('1');
   }
-  await page.locator('#passphrase').fill('PUBLIC_RANDOM_TEST_ONLY_aJ7!qZ9?mL4#vK8$rN6@xP3');
-  await expect(page.locator('#strength-box')).toHaveAttribute('data-state', 'ready');
-  await expect(page.locator('#strength-time')).toHaveText(/years?/);
+  await page.evaluate(() => {
+    window.testMobileStrengthBits = 128;
+  });
+  await page.locator('#passphrase').fill('PUBLIC MAXIMUM MOBILE MODEL FIXTURE ONLY');
+  await expect(page.locator('#strength-bits')).toHaveText('128');
+  await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '4');
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 844 });
-    await page.waitForTimeout(400);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
-    const labelFits = await page.locator('#strength-time').evaluate((label) => {
-      const chart = document.getElementById('guess-time-chart').getBoundingClientRect();
-      const bounds = label.getBoundingClientRect();
-      return bounds.left >= chart.left - 1 && bounds.right <= chart.right + 1;
-    });
-    expect(labelFits).toBe(true);
+    for (const rate of ['0.1', '1', '1000']) {
+      await page.locator('#guess-rate').selectOption(rate);
+      await expect(page.locator('#strength-time')).toHaveText(/^~\d{1,3}(?:,\d{3})+ years$/);
+      await expect(page.locator('#strength-bits')).toBeVisible();
+      await expect(page.locator('#strength-bits')).toHaveText('128');
+      await expect(page.locator('#strength-meter')).toHaveAttribute('data-score', '4');
+      const text = await page.locator('#strength-time').textContent();
+      expect(text).not.toMatch(/>\s*100|e[+-]|million|billion|trillion/i);
+      expect(await page.locator('#strength-time').getAttribute('aria-label')).toContain(text);
+      expect(await timeFits()).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      if (rate === '0.1')
+        await page.locator('#strength-box').screenshot({
+          path: testInfo.outputPath('webkit-full-years-' + width + '.png'),
+          caret: 'initial',
+        });
+    }
   }
+  await page.locator('#strength-options > summary').click();
+  await expect(page.locator('#strength-bits')).toBeVisible();
+  await expect(page.locator('#strength-bits')).toHaveText('128');
   await page.locator('#reset-button').click();
   await expect(page.locator('#guess-rate')).toHaveValue('1');
   expect(await page.locator('#strength-options').evaluate((element) => element.open)).toBe(false);
-  await expect(page.locator('#strength-marker')).toBeHidden();
+  await expect(page.locator('#strength-bits')).toHaveText('—');
+  expect(await page.locator('#strength-meter').getAttribute('data-score')).toBeNull();
 });
 
 test('mobile WebKit keeps controls readable, zoom available, and the layout inside the viewport', async ({

@@ -6,6 +6,15 @@ Application versions describe the interface, packaging, and supported features. 
 
 No changes yet.
 
+## [0.5.1] - 2026-10-05
+
+### Changed
+
+- Restored visible model bits and the compact strength meter as the primary estimate display.
+- Removed the graphical time axis and retained a plain illustrative time with its assumed total guessing rate always visible.
+- Show long durations as full comma-separated approximate years, including values beyond one hundred years, without a display cap or scientific notation.
+- Kept the default rate of one total guess per second, the 0.1/1/1,000 comparison choices, the 128-bit model cap, conditional private-email credit, and limited-coverage handling unchanged. Wallet derivation and outputs are unchanged.
+
 ## [0.5.0] - 2026-10-05
 
 ### Added
@@ -99,7 +108,8 @@ The first tagged release includes a self-contained offline app for twelve-word r
 - Monero support, keeping all four supported networks on one consistent twelve-word BIP39 recovery phrase.
 - Derivation version selection and backward compatibility, leaving one fixed strengthened algorithm.
 
-[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/sebayaki/BrainBIP/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/sebayaki/BrainBIP/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/sebayaki/BrainBIP/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/sebayaki/BrainBIP/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/sebayaki/BrainBIP/compare/v0.3.0...v0.4.0

@@ -179,24 +179,22 @@
                 aria-label="Local guesswork estimate"
               >
                 <div class="strength-overview">
-                  <p class="estimate-title">Illustrative guessing time</p>
-                  <span id="strength-label" class="strength-label">Awaiting input</span>
-                </div>
-                <div
-                  id="guess-time-chart"
-                  class="guess-time-chart"
-                  role="img"
-                  aria-label="Enter a passphrase for a time estimate under selected assumptions."
-                >
-                  <div class="guess-time-scale" aria-hidden="true">
-                    <span id="strength-time" class="guess-time-value">—</span>
-                    <div class="guess-time-track"></div>
-                    <div id="strength-marker" class="guess-time-marker" hidden>
-                      <span class="guess-time-stem"></span>
-                      <span class="guess-time-dot"></span>
+                  <div>
+                    <p class="estimate-title">Estimated guesswork</p>
+                    <div class="estimate-line">
+                      <span id="strength-bits">—</span><span class="estimate-unit">bits</span>
                     </div>
-                    <div id="guess-time-ticks" class="guess-time-ticks"></div>
                   </div>
+                  <div class="estimate-rating">
+                    <span id="strength-label" class="strength-label">Awaiting input</span>
+                    <div id="strength-meter" class="strength-meter" aria-hidden="true">
+                      <i></i><i></i><i></i><i></i>
+                    </div>
+                  </div>
+                </div>
+                <div id="strength-time-row" class="strength-time-row">
+                  <span class="strength-time-caption">Illustrative guessing time</span>
+                  <span id="strength-time" class="strength-time-value">—</span>
                 </div>
                 <p id="strength-private-note" class="strength-private-note" hidden>
                   Includes an assumed private, independent email.
@@ -220,16 +218,12 @@
                         <dt>Modelled guesses</dt>
                         <dd id="strength-guesses">—</dd>
                       </div>
-                      <div>
-                        <dt>Model bits</dt>
-                        <dd id="strength-bits">—</dd>
-                      </div>
                     </dl>
                     <p id="strength-base-estimate" class="strength-detail" hidden></p>
                     <p id="strength-detail" class="strength-detail" hidden></p>
                     <p class="strength-explanation">
-                      Logarithmic scale: equal distances mean equal time ratios. Values outside 1
-                      second–100 years sit at the nearest edge. This is not a safety score.
+                      Times use the modelled guess count and chosen rate. Long durations show the
+                      full approximate number of years, not a guaranteed lifetime of protection.
                     </p>
                   </div>
                 </details>
@@ -739,16 +733,17 @@
               </summary>
               <div class="doc-content">
                 <p>
-                  The time gauge divides modelled guesses by an assumed total attack rate. Its fixed
-                  logarithmic scale runs from one second to 100 years; it does not measure an attack
-                  or use this browser's generation time. Change the rate and inspect guesses and
-                  bits in the estimate details.
+                  The strength meter and estimated bits describe modelled guesswork. Illustrative
+                  guessing time divides that guess count by an assumed total attack rate; it does
+                  not measure an attack or use this browser's generation time. Change the rate and
+                  inspect the guess count in the estimate details. Long durations show the full
+                  approximate number of years.
                 </p>
                 <p>
                   Estimated bits describe modelled guesswork, not measured entropy. Dictionary
                   words, patterns, personal information, and non-English inputs can behave
-                  differently from the model. Limited model coverage hides the time marker. Model
-                  bits are capped at 128; neither this cap nor the end of the time axis is a
+                  differently from the model. Limited model coverage hides the time comparison.
+                  Model bits are capped at 128; neither this cap nor a long estimated duration is a
                   security guarantee.
                 </p>
                 <p>
