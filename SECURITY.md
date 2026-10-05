@@ -1,0 +1,11 @@
+# Security policy
+
+BrainBIP is experimental software and has not received an independent security audit. Read the [security model](docs/security.md) for the limitations of input strength estimates, offline execution, and recovery.
+
+## Reporting a vulnerability
+
+Use **Report a vulnerability** in the repository's [Security advisories](https://github.com/sebayaki/BrainBIP/security/advisories) when private reporting is available. If that option is unavailable, [open an issue](https://github.com/sebayaki/BrainBIP/issues/new/choose) asking for a private contact channel, without including exploit details or secrets.
+
+Never submit real passphrases, email salts, recovery words, private keys, or screenshots containing them. Reproduction steps should use public test inputs and identify the affected application version or commit.
+
+Report ordinary interface, build, and compatibility bugs through the [bug report form](https://github.com/sebayaki/BrainBIP/issues/new?template=bug_report.yml).

@@ -64,4 +64,4 @@ See the [hash-wasm Argon2 API](https://github.com/Daninet/hash-wasm/blob/v4.12.0
 
 ## Reporting a problem
 
-Report ordinary bugs through GitHub Issues using public test inputs. For a vulnerability, use **Report a vulnerability** in the repository's Security tab if private reporting is available. Otherwise, open an issue requesting a private contact channel without including exploit details or secrets. Never include actual recovery phrases, private keys, or personal wallet inputs in a report.
+See the [security policy and reporting instructions](../SECURITY.md). Report ordinary bugs through GitHub Issues using public test inputs. Never include actual recovery phrases, private keys, or personal wallet inputs in a report.
