@@ -38,17 +38,18 @@ Third-party actions are pinned to full commit hashes. Build and test jobs have r
 
 ## Downloaded artifacts
 
-Each GitHub Release includes:
+The release upload set contains seven assets:
 
 - `brainbip.html` — the complete offline application.
-- `index.html` — the byte-identical hosted edition.
 - `VERSION.json` — application name and version.
-- `SHA256SUMS.txt` — checksums for both HTML files, version metadata, licenses, the share image, and the sitemap.
+- `SHA256SUMS.txt` — checksums for the six uploaded payload files: the offline HTML, version metadata, licenses, the share image, and the sitemap.
 - `LICENSE` and `THIRD_PARTY_NOTICES.txt` — the project and bundled dependency licenses.
 - `social-card.png` — the 1200×630 image used by hosted-page link previews.
 - `sitemap.xml` — the hosted page's canonical URL for search crawlers.
 
-After downloading all eight assets into one directory, verify them with `sha256sum --check SHA256SUMS.txt` on Linux or `shasum -a 256 --check SHA256SUMS.txt` on macOS. A checksum verifies bytes against a manifest; it is not an independent authenticity guarantee. Check the repository, version tag, and source as well.
+After downloading all seven assets into one directory, verify them with `sha256sum --check SHA256SUMS.txt` on Linux or `shasum -a 256 --check SHA256SUMS.txt` on macOS. The release manifest covers only its uploaded payloads and excludes `index.html`. A checksum verifies bytes against a manifest; it is not an independent authenticity guarantee. Check the repository, version tag, and source as well.
+
+The build and Pages distribution retain both `index.html` and its byte-identical offline edition, `brainbip.html`. The hosted `SHA256SUMS.txt` covers that complete distribution, including both HTML files. The release manifest is prepared from the verified build for its smaller upload set. Use the manifest accompanying the files you downloaded.
 
 Only `brainbip.html` is needed to run the offline app. The PNG and sitemap accompany the hosted page; their URLs in page metadata do not load remote resources during app execution. Both HTML files identify `https://sebayaki.github.io/BrainBIP/` as canonical. Search indexing and social preview rendering depend on the receiving crawler and its cache.
 

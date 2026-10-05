@@ -4,7 +4,9 @@ Application versions describe the interface, packaging, and supported features. 
 
 ## [Unreleased]
 
-No changes yet.
+### Fixed
+
+- Package one HTML download per release, with a checksum list covering only the included assets. The hosted site retains its index page.
 
 ## [0.5.2] - 2026-10-05
 

@@ -51,9 +51,11 @@ jobs:
       - name: Verify downloaded checksums
         working-directory: dist
         run: sha256sum --strict --check SHA256SUMS.txt
-      - name: Prepare release notes
+      - name: Prepare release assets and notes
         run: |
           node scripts/release.mjs check "$RELEASE_TAG"
+          node scripts/release.mjs package "$RELEASE_TAG"
+          (cd release-dist && sha256sum --strict --check SHA256SUMS.txt)
           node scripts/release.mjs notes "$RELEASE_TAG" > "$RUNNER_TEMP/brainbip-release-notes.md"
       - name: Publish the versioned release
         env:
@@ -65,11 +67,15 @@ jobs:
             echo 'The tag changed after verification; refusing to publish.' >&2
             exit 1
           fi
-          assets=(dist/brainbip.html dist/index.html dist/VERSION.json dist/SHA256SUMS.txt dist/LICENSE dist/THIRD_PARTY_NOTICES.txt dist/social-card.png dist/sitemap.xml)
+          assets=(release-dist/*)
           if draft=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null); then
             if [ "$draft" != 'true' ]; then
               echo 'This release is already published. Published assets are never overwritten.' >&2
               exit 1
+            fi
+            has_duplicate=$(gh release view "$RELEASE_TAG" --json assets --jq 'any(.assets[]; .name == "index.html")')
+            if [ "$has_duplicate" = 'true' ]; then
+              gh release delete-asset "$RELEASE_TAG" index.html --yes
             fi
             gh release edit "$RELEASE_TAG" --title "BrainBIP $RELEASE_TAG" --notes-file "$RUNNER_TEMP/brainbip-release-notes.md"
             gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

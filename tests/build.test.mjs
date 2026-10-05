@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const file = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
 const project = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
@@ -68,6 +70,27 @@ test('application metadata and footer match the package version', async () => {
   assert.ok(file.includes(`<meta name="application-version" content="${project.version}">`));
   const footerVersion = file.match(/<span id="app-version">\s*([^<]+)<\/span\s*>/);
   assert.equal(footerVersion?.[1].trim(), `v${project.version}`);
+});
+
+test('release downloads contain one HTML and a manifest covering only the shipped payloads', async () => {
+  execFileSync(process.execPath, [
+    fileURLToPath(new URL('../scripts/release.mjs', import.meta.url)),
+    'package',
+    `v${project.version}`,
+  ]);
+  const release = new URL('../release-dist/', import.meta.url);
+  const payloads = distributionFiles.filter((name) => name !== 'index.html');
+  assert.deepEqual((await readdir(release)).sort(), [...payloads, 'SHA256SUMS.txt'].sort());
+  const sums = await readFile(new URL('SHA256SUMS.txt', release), 'utf8');
+  const entries = sums.trim().split('\n');
+  assert.equal(entries.length, payloads.length);
+  assert.doesNotMatch(sums, /index\.html/);
+  for (const name of payloads) {
+    const bytes = await readFile(new URL(name, release));
+    assert.deepEqual(bytes, await readFile(new URL(`../dist/${name}`, import.meta.url)));
+    assert.ok(entries.includes(`${checksum(bytes, 'hex')}  ${name}`));
+  }
+  assert.equal(await readFile(new URL('../dist/index.html', import.meta.url), 'utf8'), file);
 });
 
 test('executable assets are inline and covered by a restrictive CSP', () => {

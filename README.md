@@ -29,7 +29,7 @@ The interface, cryptographic code, dictionaries, fonts, and WebAssembly fit in *
 3. Reveal the selected phrase and browse the four network tabs. You can switch word count without repeating the heavy computation; switching hides the words and restores default address choices. Choose an address path preset, or enter a custom path, to view twenty addresses for that selection.
 4. Use the reset control to discard inputs and results. Your system clipboard is not cleared.
 
-Use [Releases](https://github.com/sebayaki/BrainBIP/releases) for versioned downloads. The hosted demo follows `main`. Verify downloads against their accompanying `SHA256SUMS.txt`; the hosted checksum file is [available here](https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt).
+Use [Releases](https://github.com/sebayaki/BrainBIP/releases) for the versioned `brainbip.html` download and verify release files against that release's accompanying `SHA256SUMS.txt`. The hosted demo follows `main`; its [separate checksum file](https://sebayaki.github.io/BrainBIP/SHA256SUMS.txt) covers the Pages distribution, including `index.html`. See the [downloaded artifact scopes](docs/releases.md#downloaded-artifacts).
 
 The app requires a modern browser with WebAssembly and Web Workers, plus **512 MiB of derivation memory**, with additional browser overhead. Some devices cannot allocate this memory. The computation cost is fixed and never reduced automatically. Execution time varies by device; the interface shows elapsed time and the current stage.
 
